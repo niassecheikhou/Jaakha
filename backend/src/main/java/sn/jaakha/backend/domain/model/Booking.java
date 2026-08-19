@@ -53,7 +53,7 @@ public class Booking {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 30)
     private BookingStatus status = BookingStatus.REQUESTED;
 
     @Column(nullable = false)

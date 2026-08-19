@@ -31,7 +31,7 @@ public class Notification {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50)
     private NotificationType type;
 
     @Column(nullable = false)

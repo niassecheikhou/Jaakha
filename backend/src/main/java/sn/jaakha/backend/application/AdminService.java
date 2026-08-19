@@ -14,7 +14,11 @@ import sn.jaakha.backend.domain.repository.AppUserRepository;
 
 @Service
 public class AdminService {
-    private static final String PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    private static final String LOWERCASE = "abcdefghijkmnopqrstuvwxyz";
+    private static final String UPPERCASE = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    private static final String DIGITS = "23456789";
+    private static final String SPECIALS = "@#$%!";
+    private static final String PASSWORD_CHARS = LOWERCASE + UPPERCASE + DIGITS + SPECIALS;
 
     private final AppUserRepository userRepository;
     private final AuthService authService;
@@ -54,8 +58,12 @@ public class AdminService {
     }
 
     private String generatePassword() {
-        StringBuilder password = new StringBuilder();
-        for (int index = 0; index < 12; index++) {
+        StringBuilder password = new StringBuilder()
+                .append(UPPERCASE.charAt(random.nextInt(UPPERCASE.length())))
+                .append(LOWERCASE.charAt(random.nextInt(LOWERCASE.length())))
+                .append(DIGITS.charAt(random.nextInt(DIGITS.length())))
+                .append(SPECIALS.charAt(random.nextInt(SPECIALS.length())));
+        for (int index = password.length(); index < 12; index++) {
             password.append(PASSWORD_CHARS.charAt(random.nextInt(PASSWORD_CHARS.length())));
         }
         return password.toString();

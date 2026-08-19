@@ -3,8 +3,11 @@ package sn.jaakha.backend.application;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,6 +22,7 @@ import sn.jaakha.backend.application.dto.VerifyOtpRequest;
 import sn.jaakha.backend.domain.enums.NotificationType;
 import sn.jaakha.backend.domain.enums.Role;
 import sn.jaakha.backend.domain.exception.ApiException;
+import sn.jaakha.backend.domain.exception.FieldValidationException;
 import sn.jaakha.backend.domain.model.AppUser;
 import sn.jaakha.backend.domain.model.EmailOtp;
 import sn.jaakha.backend.domain.model.SessionToken;
@@ -29,6 +33,10 @@ import sn.jaakha.backend.infrastructure.mail.MailService;
 
 @Service
 public class AuthService {
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    private static final Pattern SENEGAL_PHONE_PATTERN = Pattern.compile("^\\+221(70|71|76|77|78)[0-9]{7}$");
+    private static final Pattern STRONG_PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{6,}$");
+
     private final AppUserRepository userRepository;
     private final SessionTokenRepository sessionTokenRepository;
     private final EmailOtpRepository emailOtpRepository;
@@ -52,12 +60,12 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        validateRegistrationFields(request.fullName(), request.email(), request.phone(), request.password());
         if (request.role() == Role.ADMIN) {
             throw new ApiException(HttpStatus.FORBIDDEN, "La creation admin publique est interdite.");
         }
         String email = normalizeEmail(request.email());
-        String phone = blankToNull(request.phone());
-        ensureContact(email, phone);
+        String phone = normalizePhone(request.phone());
         ensureUnique(email, phone);
 
         AppUser user = userRepository.save(new AppUser(
@@ -116,9 +124,9 @@ public class AuthService {
     }
 
     public AppUser createUserByAdmin(String fullName, String email, String phone, String rawPassword, Role role) {
+        validateRegistrationFields(fullName, email, phone, rawPassword);
         String normalizedEmail = normalizeEmail(email);
-        String normalizedPhone = blankToNull(phone);
-        ensureContact(normalizedEmail, normalizedPhone);
+        String normalizedPhone = normalizePhone(phone);
         ensureUnique(normalizedEmail, normalizedPhone);
         AppUser user = userRepository.save(new AppUser(
                 fullName.trim(),
@@ -166,14 +174,41 @@ public class AuthService {
         }
     }
 
-    private void ensureContact(String email, String phone) {
-        if (email == null && phone == null) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Un email ou un telephone est requis.");
+    private void validateRegistrationFields(String fullName, String email, String phone, String password) {
+        Map<String, String> fields = new LinkedHashMap<>();
+        if (fullName == null || fullName.isBlank()) {
+            fields.put("fullName", "Le nom complet est obligatoire.");
+        } else if (fullName.trim().length() < 5) {
+            fields.put("fullName", "Le nom complet doit contenir au moins 5 caracteres.");
+        }
+        if (email == null || email.isBlank()) {
+            fields.put("email", "L'adresse email est obligatoire.");
+        } else if (!EMAIL_PATTERN.matcher(email.trim().toLowerCase(Locale.ROOT)).matches()) {
+            fields.put("email", "L'adresse email doit etre valide, par exemple cheikh@gmail.com.");
+        }
+        if (phone == null || phone.isBlank()) {
+            fields.put("phone", "Le numero de telephone est obligatoire.");
+        } else if (!SENEGAL_PHONE_PATTERN.matcher(phone.trim()).matches()) {
+            fields.put("phone", "Le numero de telephone doit etre un numero senegalais valide au format +221 suivi de 70, 71, 76, 77 ou 78. Exemple: +221771234567.");
+        }
+        if (password == null || password.isBlank()) {
+            fields.put("password", "Le mot de passe est obligatoire.");
+        } else if (password.length() < 6) {
+            fields.put("password", "Le mot de passe doit contenir au moins 6 caracteres.");
+        } else if (!STRONG_PASSWORD_PATTERN.matcher(password).matches()) {
+            fields.put("password", "Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractere special.");
+        }
+        if (!fields.isEmpty()) {
+            throw new FieldValidationException(fields);
         }
     }
 
     private String normalizeEmail(String email) {
         return blankToNull(email) == null ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizePhone(String phone) {
+        return phone.trim();
     }
 
     private String blankToNull(String value) {

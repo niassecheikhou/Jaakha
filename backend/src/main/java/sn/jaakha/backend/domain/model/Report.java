@@ -41,7 +41,7 @@ public class Report {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 30)
     private ReportStatus status = ReportStatus.OPEN;
 
     @Column(nullable = false)

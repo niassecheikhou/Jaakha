@@ -56,7 +56,7 @@ public class ProviderProfile {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 30)
     private ProviderStatus status = ProviderStatus.PENDING;
 
     @Column(nullable = false, precision = 3, scale = 2)

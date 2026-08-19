@@ -30,7 +30,7 @@ public class ProviderAvailability {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private DayOfWeek dayOfWeek;
 
     @Column(nullable = false)
