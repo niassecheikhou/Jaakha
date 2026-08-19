@@ -1,0 +1,19 @@
+services:
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: jaakha-postgres
+
+    environment:
+      POSTGRES_DB: jaakha
+      POSTGRES_USER: jaakha
+      POSTGRES_PASSWORD: jaakha
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - jaakha_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  jaakha_postgres_data:
