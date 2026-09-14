@@ -132,3 +132,89 @@ public class BookingService {
                 || (current == BookingStatus.IN_PROGRESS && next == BookingStatus.DONE);
     }
 }
+package sn.jaakha.backend.application;
+
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import sn.jaakha.backend.application.dto.AuthenticatedUser;
+import sn.jaakha.backend.application.dto.BookingCreateRequest;
+import sn.jaakha.backend.application.dto.BookingResponse;
+import sn.jaakha.backend.domain.enums.ProviderStatus;
+import sn.jaakha.backend.domain.model.ProviderProfile;
+import sn.jaakha.backend.domain.repository.ProviderProfileRepository;
+import sn.jaakha.backend.infrastructure.persistence.BookingRepository;
+import sn.jaakha.backend.infrastructure.persistence.UserAccountRepository;
+import sn.jaakha.backend.presentation.ForbiddenException;
+
+@Service
+public class BookingService {
+    private static final Set<String> ALLOWED_STATUSES = Set.of(
+            "REQUESTED", "ACCEPTED", "IN_PROGRESS", "DONE", "CANCELLED"
+    );
+
+    private final BookingRepository bookingRepository;
+    private final ProviderProfileRepository providerProfileRepository;
+    private final UserAccountRepository userAccountRepository;
+    private final NotificationService notificationService;
+
+    public BookingService(
+            BookingRepository bookingRepository,
+            ProviderProfileRepository providerProfileRepository,
+            UserAccountRepository userAccountRepository,
+            NotificationService notificationService
+    ) {
+        this.bookingRepository = bookingRepository;
+        this.providerProfileRepository = providerProfileRepository;
+        this.userAccountRepository = userAccountRepository;
+        this.notificationService = notificationService;
+    }
+
+    @Transactional
+    public BookingResponse create(AuthenticatedUser user, BookingCreateRequest request) {
+        requireRole(user, "EMPLOYEUR", "Seuls les employeurs peuvent creer une reservation.");
+        ProviderProfile provider = providerProfileRepository.findById(request.providerId())
+                .filter(profile -> profile.getStatus() == ProviderStatus.APPROVED)
+                .filter(profile -> userAccountRepository.visibleProviderUserIds().contains(profile.getUserId()))
+                .orElseThrow(() -> new IllegalArgumentException("Ce prestataire n'est pas disponible pour une reservation."));
+
+        BookingResponse booking = bookingRepository.create(user.id(), provider.getId());
+        notificationService.notifyAdminsAboutBooking(booking);
+        notificationService.notifyProviderAboutBookingRequested(booking);
+        return booking;
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingResponse> mine(AuthenticatedUser user) {
+        if (!"EMPLOYEUR".equals(user.role()) && !"PRESTATAIRE".equals(user.role())) {
+            throw new ForbiddenException("Tu dois etre connecte avec un compte employeur ou prestataire.");
+        }
+        return bookingRepository.findMine(user.id(), user.role());
+    }
+
+    @Transactional
+    public BookingResponse updateStatus(AuthenticatedUser user, UUID id, String status) {
+        String cleanStatus = status == null ? "" : status.trim().toUpperCase();
+        if (!ALLOWED_STATUSES.contains(cleanStatus)) {
+            throw new IllegalArgumentException("Le statut de reservation est invalide.");
+        }
+        if ("EMPLOYEUR".equals(user.role()) && !"CANCELLED".equals(cleanStatus)) {
+            throw new ForbiddenException("Un employeur peut seulement annuler sa reservation.");
+        }
+        if ("PRESTATAIRE".equals(user.role()) && "CANCELLED".equals(cleanStatus)) {
+            throw new ForbiddenException("Un prestataire peut accepter, demarrer ou terminer une mission.");
+        }
+        if (!"EMPLOYEUR".equals(user.role()) && !"PRESTATAIRE".equals(user.role())) {
+            throw new ForbiddenException("Tu dois etre connecte avec un compte employeur ou prestataire.");
+        }
+        return bookingRepository.updateStatus(id, cleanStatus, user.id(), user.role());
+    }
+
+    private void requireRole(AuthenticatedUser user, String role, String message) {
+        if (!role.equals(user.role())) {
+            throw new ForbiddenException(message);
+        }
+    }
+}

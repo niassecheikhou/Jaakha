@@ -1,71 +1,172 @@
 package sn.jaakha.backend.application;
 
-import java.security.SecureRandom;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sn.jaakha.backend.application.dto.AdminCreateUserRequest;
+import sn.jaakha.backend.application.dto.BookingResponse;
+import sn.jaakha.backend.application.dto.ProviderProfileResponse;
 import sn.jaakha.backend.application.dto.UserResponse;
-import sn.jaakha.backend.domain.exception.ApiException;
-import sn.jaakha.backend.domain.model.AppUser;
-import sn.jaakha.backend.domain.repository.AppUserRepository;
+import sn.jaakha.backend.domain.enums.ProviderStatus;
+import sn.jaakha.backend.domain.model.ProviderProfile;
+import sn.jaakha.backend.domain.repository.ProviderProfileRepository;
+import sn.jaakha.backend.infrastructure.persistence.BookingAdminRepository;
+import sn.jaakha.backend.infrastructure.persistence.UserAccountRepository;
+import sn.jaakha.backend.presentation.ConflictException;
 
 @Service
 public class AdminService {
-    private static final String LOWERCASE = "abcdefghijkmnopqrstuvwxyz";
-    private static final String UPPERCASE = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-    private static final String DIGITS = "23456789";
-    private static final String SPECIALS = "@#$%!";
-    private static final String PASSWORD_CHARS = LOWERCASE + UPPERCASE + DIGITS + SPECIALS;
+    private final BookingAdminRepository bookingAdminRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final ProviderProfileRepository providerProfileRepository;
+    private final UserAccountRepository userAccountRepository;
+    private final NotificationService notificationService;
 
-    private final AppUserRepository userRepository;
-    private final AuthService authService;
-    private final SecureRandom random = new SecureRandom();
-
-    public AdminService(AppUserRepository userRepository, AuthService authService) {
-        this.userRepository = userRepository;
-        this.authService = authService;
+    public AdminService(
+            BookingAdminRepository bookingAdminRepository,
+            PasswordEncoder passwordEncoder,
+            ProviderProfileRepository providerProfileRepository,
+            UserAccountRepository userAccountRepository,
+            NotificationService notificationService
+    ) {
+        this.bookingAdminRepository = bookingAdminRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.providerProfileRepository = providerProfileRepository;
+        this.userAccountRepository = userAccountRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
-    public List<UserResponse> listUsers() {
-        return userRepository.findAll().stream().map(UserResponse::from).toList();
+    public List<UserResponse> users() {
+        return userAccountRepository.findAll();
     }
 
     @Transactional
     public UserResponse createUser(AdminCreateUserRequest request) {
-        String password = request.password() == null || request.password().isBlank()
-                ? generatePassword()
-                : request.password();
-        AppUser user = authService.createUserByAdmin(
-                request.fullName(),
-                request.email(),
-                request.phone(),
-                password,
-                request.role()
-        );
-        return UserResponse.from(user);
+        UUID userId = UUID.randomUUID();
+        String role = request.role() == null || request.role().isBlank() ? "EMPLOYEUR" : request.role();
+
+        try {
+            userAccountRepository.create(
+                    userId,
+                    request.fullName().trim(),
+                    request.email().trim().toLowerCase(Locale.ROOT),
+                    request.phone().trim(),
+                    passwordEncoder.encode(request.password()),
+                    role,
+                    false
+            );
+        } catch (DataIntegrityViolationException exception) {
+            throw new ConflictException("Un compte existe deja avec cet email ou ce numero de telephone.");
+        }
+
+        return userAccountRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Le compte utilisateur cree est introuvable."));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProviderProfileResponse> providers(String status) {
+        List<ProviderProfile> profiles;
+        if (status == null || status.isBlank()) {
+            profiles = providerProfileRepository.findAll();
+        } else {
+            profiles = providerProfileRepository.findByStatusOrderByCreatedAtDesc(ProviderStatus.valueOf(status));
+        }
+        return profiles.stream()
+                .map(ProviderProfileResponse::from)
+                .toList();
     }
 
     @Transactional
-    public UserResponse setActive(UUID id, boolean active) {
-        AppUser user = userRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Utilisateur introuvable."));
-        user.setActive(active);
-        return UserResponse.from(userRepository.save(user));
+    public ProviderProfileResponse updateProviderStatus(UUID id, String status) {
+        ProviderProfile profile = providerProfileRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Le profil prestataire est introuvable."));
+        profile.setStatus(ProviderStatus.valueOf(status));
+        return ProviderProfileResponse.from(providerProfileRepository.save(profile));
     }
 
-    private String generatePassword() {
-        StringBuilder password = new StringBuilder()
-                .append(UPPERCASE.charAt(random.nextInt(UPPERCASE.length())))
-                .append(LOWERCASE.charAt(random.nextInt(LOWERCASE.length())))
-                .append(DIGITS.charAt(random.nextInt(DIGITS.length())))
-                .append(SPECIALS.charAt(random.nextInt(SPECIALS.length())));
-        for (int index = password.length(); index < 12; index++) {
-            password.append(PASSWORD_CHARS.charAt(random.nextInt(PASSWORD_CHARS.length())));
+    @Transactional
+    public UserResponse updateUserActive(UUID id, boolean active) {
+        UserResponse user = findEditableUser(id);
+        if (user.archived()) {
+            throw new IllegalArgumentException("Ce compte est archive. Restaure-le avant de modifier sa validation.");
         }
-        return password.toString();
+        if (active) {
+            assertProfileReadyForValidation(user);
+        }
+
+        userAccountRepository.updateActive(id, active);
+        return userAccountRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Le compte utilisateur est introuvable."));
+    }
+
+    @Transactional
+    public UserResponse updateUserArchived(UUID id, boolean archived) {
+        findEditableUser(id);
+        userAccountRepository.updateArchived(id, archived);
+        return userAccountRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Le compte utilisateur est introuvable."));
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingResponse> bookings(String status) {
+        return bookingAdminRepository.findAll(status);
+    }
+
+    @Transactional
+    public BookingResponse updateBookingStatus(UUID id, String status) {
+        BookingResponse booking = bookingAdminRepository.updateStatus(id, status);
+        notificationService.notifyParticipantsAboutBookingStatus(booking);
+        return booking;
+    }
+
+    private UserResponse findEditableUser(UUID id) {
+        UserResponse user = userAccountRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Le compte utilisateur est introuvable."));
+        if ("ADMIN".equals(user.role())) {
+            throw new IllegalArgumentException("Le compte administrateur ne peut pas etre modifie depuis ce dashboard.");
+        }
+        return user;
+    }
+
+    private void assertProfileReadyForValidation(UserResponse user) {
+        List<String> missingFields = new ArrayList<>();
+        addMissing(missingFields, user.fullName(), "nom complet");
+        addMissing(missingFields, user.phone(), "telephone");
+        addMissing(missingFields, user.photoUrl(), "photo du profil");
+        addMissing(missingFields, user.identityPhotoUrl(), "photo de la piece d'identite");
+        addMissing(missingFields, user.zone(), "zone");
+
+        if ("PRESTATAIRE".equals(user.role())) {
+            addMissing(missingFields, user.bio(), "bio");
+            if (user.monthlyRate() == null || user.monthlyRate().compareTo(BigDecimal.ZERO) <= 0) {
+                missingFields.add("tarif mensuel");
+            }
+            if (user.skills() == null || user.skills().isEmpty()) {
+                missingFields.add("competences");
+            }
+            addMissing(missingFields, user.guardianFullName(), "nom complet du tuteur");
+            addMissing(missingFields, user.guardianPhone(), "telephone du tuteur");
+        }
+
+        if (!missingFields.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Impossible de valider ce compte: dossier incomplet. Champs manquants: "
+                            + String.join(", ", missingFields)
+                            + "."
+            );
+        }
+    }
+
+    private void addMissing(List<String> missingFields, String value, String label) {
+        if (value == null || value.isBlank()) {
+            missingFields.add(label);
+        }
     }
 }

@@ -1,8 +1,8 @@
 package sn.jaakha.backend.application.dto;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
-import sn.jaakha.backend.domain.enums.Role;
-import sn.jaakha.backend.domain.model.AppUser;
 
 public record UserResponse(
         UUID id,
@@ -23,5 +23,20 @@ public record UserResponse(
                 user.isEmailVerified(),
                 user.isActive()
         );
-    }
+    
+        String role,
+        boolean emailVerified,
+        boolean active,
+        boolean archived,
+        String photoUrl,
+        String identityPhotoUrl,
+        String bio,
+        String zone,
+        BigDecimal monthlyRate,
+        int experienceYears,
+        List<String> skills,
+        String guardianFullName,
+        String guardianPhone
+) {
+
 }

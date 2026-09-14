@@ -1,14 +1,12 @@
-FROM eclipse-temurin:21-jdk-alpine AS build
-WORKDIR /workspace
-COPY mvnw pom.xml ./
-COPY .mvn .mvn
-RUN chmod +x mvnw
-RUN ./mvnw -q -DskipTests dependency:go-offline
-COPY src src
-RUN ./mvnw -q -DskipTests package
-
-FROM eclipse-temurin:21-jre-alpine
+FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
-COPY --from=build /workspace/target/*.jar app.jar
+COPY pom.xml mvnw mvnw.cmd ./
+COPY .mvn .mvn
+COPY src src
+RUN mvn -B -DskipTests package
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
