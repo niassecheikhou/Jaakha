@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { StatusBadge } from '../../components/StatusBadge'
-import { WorkspaceShell, type WorkspaceNavItem } from '../../components/WorkspaceShell'
-import { bookingsApi } from '../../services/api'
-import { useAuth } from '../../hooks/use-auth'
+import { StatusBadge } from '../../../components/StatusBadge'
+import { WorkspaceShell, type WorkspaceNavItem } from '../../../components/WorkspaceShell'
+import { useAuth } from '../../../hooks/use-auth'
+import { bookingsApi } from '../../../services/api'
 import { ProviderProfileForm } from './ProviderProfileForm'
 
 type ProviderMenu = 'requests' | 'profile'

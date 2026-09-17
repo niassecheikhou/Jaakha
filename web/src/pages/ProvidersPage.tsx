@@ -1,4 +1,4 @@
-import { ProviderSearch } from '../features/providers/ProviderSearch'
+import { ProviderSearch } from '../features/providers/search/ProviderSearch'
 
 export function ProvidersPage() {
   return <ProviderSearch />

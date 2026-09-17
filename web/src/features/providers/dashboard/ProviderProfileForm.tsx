@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { AccountProfileForm } from '../account/AccountProfileForm'
-import { providersApi } from '../../services/api'
-import type { AccountProfilePayload, Availability, DayOfWeek } from '../../types/api'
+import { AccountProfileForm } from '../../account/AccountProfileForm'
+import { providersApi } from '../../../services/api'
+import type { AccountProfilePayload, Availability, DayOfWeek } from '../../../types/api'
 
 const weekDays: DayOfWeek[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
 

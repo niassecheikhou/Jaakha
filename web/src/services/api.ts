@@ -4,6 +4,7 @@ import {
   getStoredToken,
   storeAuth,
 } from '../utils/auth-storage'
+import { api } from './costante'
 import type {
   AccountProfile,
   AccountProfilePayload,
@@ -13,21 +14,24 @@ import type {
   Booking,
   BookingPayload,
   BookingStatus,
+  ContactMessage,
+  ContactMessagePayload,
+  ForgotPasswordPayload,
   LoginPayload,
+  MessageResponse,
   Notification,
   PhotoUploadResponse,
   ProviderProfile,
   ProviderProfilePayload,
   ProviderStatus,
   RegisterPayload,
+  ResetPasswordPayload,
   Review,
   ReviewPayload,
   User,
 } from '../types/api'
 
-export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api',
-})
+export { api } from './costante'
 
 api.interceptors.request.use((config) => {
   const token = getStoredToken()
@@ -96,6 +100,14 @@ export const authApi = {
   async login(payload: LoginPayload) {
     const { data } = await api.post<AuthResponse>('/auth/login', payload)
     storeAuth(data.token, data.user)
+    return data
+  },
+  async forgotPassword(payload: ForgotPasswordPayload) {
+    const { data } = await api.post<MessageResponse>('/auth/forgot-password', payload)
+    return data
+  },
+  async resetPassword(payload: ResetPasswordPayload) {
+    const { data } = await api.post<MessageResponse>('/auth/reset-password', payload)
     return data
   },
 }
@@ -170,6 +182,13 @@ export const reviewsApi = {
   },
 }
 
+export const contactApi = {
+  async create(payload: ContactMessagePayload) {
+    const { data } = await api.post<ContactMessage>('/contact/messages', payload)
+    return data
+  },
+}
+
 export const notificationsApi = {
   async list() {
     const { data } = await api.get<Notification[]>('/notifications')
@@ -199,6 +218,17 @@ export const adminApi = {
   async bookings(status?: BookingStatus) {
     const { data } = await api.get<Booking[]>('/admin/bookings', {
       params: status ? { status } : undefined,
+    })
+    return data
+  },
+  async contactMessages() {
+    const { data } = await api.get<ContactMessage[]>('/admin/contact-messages')
+    return data
+  },
+  async exportContactMessages(format: 'csv' | 'excel') {
+    const { data } = await api.get<Blob>('/admin/contact-messages/export', {
+      params: { format },
+      responseType: 'blob',
     })
     return data
   },

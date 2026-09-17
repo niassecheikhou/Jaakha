@@ -44,6 +44,16 @@ public class UserAccountSchemaInitializer {
                         created_at timestamp not null
                     )
                     """);
+            jdbcTemplate.execute("""
+                    create table if not exists password_reset_token (
+                        id uuid primary key,
+                        user_id uuid not null,
+                        token_hash varchar(255) not null unique,
+                        expires_at timestamp not null,
+                        used_at timestamp,
+                        created_at timestamp not null
+                    )
+                    """);
             jdbcTemplate.execute(
                     "alter table app_user add column if not exists archived boolean not null default false"
             );
@@ -108,6 +118,23 @@ public class UserAccountSchemaInitializer {
             jdbcTemplate.execute("alter table notification add column if not exists recipient_id uuid");
             jdbcTemplate.execute("alter table notification add column if not exists read boolean not null default false");
             jdbcTemplate.execute("alter table notification add column if not exists created_at timestamp not null default current_timestamp");
+            jdbcTemplate.execute("""
+                    create table if not exists contact_message (
+                        id uuid primary key,
+                        name varchar(160) not null,
+                        email varchar(255) not null,
+                        phone varchar(40),
+                        company varchar(160),
+                        message varchar(2000) not null,
+                        created_at timestamp not null
+                    )
+                    """);
+            jdbcTemplate.execute("alter table contact_message add column if not exists name varchar(160) not null default ''");
+            jdbcTemplate.execute("alter table contact_message add column if not exists email varchar(255) not null default ''");
+            jdbcTemplate.execute("alter table contact_message add column if not exists phone varchar(40)");
+            jdbcTemplate.execute("alter table contact_message add column if not exists company varchar(160)");
+            jdbcTemplate.execute("alter table contact_message add column if not exists message varchar(2000) not null default ''");
+            jdbcTemplate.execute("alter table contact_message add column if not exists created_at timestamp not null default current_timestamp");
             ensureAdminAccount(jdbcTemplate, passwordEncoder, adminEmail, adminPhone, adminPassword);
         };
     }

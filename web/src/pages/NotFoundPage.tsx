@@ -8,8 +8,8 @@ export function NotFoundPage() {
         <h1>Page introuvable</h1>
       </div>
       <Link className="button primary" to="/">
-        Retour aux prestataires
+        Retour à l'accueil
       </Link>
-    </section>
+    </section> 
   )
 }

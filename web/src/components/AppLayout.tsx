@@ -40,7 +40,9 @@ export function AppLayout() {
         </button>
         <nav className="nav" id="primary-navigation">
           <NavLink to="/about" onClick={closeMobileMenu}>A propos</NavLink>
+          <NavLink to="/services" onClick={closeMobileMenu}>Nos services</NavLink>
           <NavLink to="/providers" onClick={closeMobileMenu}>Prestataires</NavLink>
+          <NavLink to="/contact" onClick={closeMobileMenu}>Contact</NavLink>
           {user?.role === 'EMPLOYEUR' && <NavLink to="/employer" onClick={closeMobileMenu}>Mes reservations</NavLink>}
           {user?.role === 'PRESTATAIRE' && <NavLink to="/provider" onClick={closeMobileMenu}>Espace prestataire</NavLink>}
           {user?.role === 'ADMIN' && <NavLink to="/admin" onClick={closeMobileMenu}>Admin</NavLink>}
@@ -79,6 +81,7 @@ export function AppLayout() {
           </div>
           <nav className="footer-column" aria-label="Produits">
             <h2>Produits</h2>
+            <NavLink to="/services">Nos services</NavLink>
             <NavLink to="/providers">Prestataires</NavLink>
             <NavLink to="/register">Inscription</NavLink>
             <NavLink to="/login">Connexion</NavLink>
@@ -86,12 +89,13 @@ export function AppLayout() {
           <nav className="footer-column" aria-label="Entreprise">
             <h2>Entreprise</h2>
             <NavLink to="/about">A propos</NavLink>
+            <NavLink to="/services">Services</NavLink>
             <NavLink to="/providers">Partenaires</NavLink>
           </nav>
           <nav className="footer-column" aria-label="Support">
             <h2>Support</h2>
             <NavLink to="/providers">Centre d'aide</NavLink>
-            <NavLink to="/register">Contact</NavLink>
+            <NavLink to="/contact">Contact</NavLink>
           </nav>
           <div className="footer-bottom">
             <span>© 2026 Jaankha. Tous droits reserves.</span>

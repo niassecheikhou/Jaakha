@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
-import { StarRating } from '../../components/StarRating'
-import { providersApi } from '../../services/api'
-import { formatDay, formatPrice } from '../../utils/format'
-import type { DayOfWeek, ProviderProfile } from '../../types/api'
+import { StarRating } from '../../../components/StarRating'
+import { providersApi } from '../../../services/api'
+import type { DayOfWeek, ProviderProfile } from '../../../types/api'
+import { formatDay, formatPrice } from '../../../utils/format'
 
 const days: DayOfWeek[] = [
   'MONDAY',

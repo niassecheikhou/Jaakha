@@ -26,6 +26,7 @@ public class AdminService {
     private final PasswordEncoder passwordEncoder;
     private final ProviderProfileRepository providerProfileRepository;
     private final UserAccountRepository userAccountRepository;
+    private final MailService mailService;
     private final NotificationService notificationService;
 
     public AdminService(
@@ -33,12 +34,14 @@ public class AdminService {
             PasswordEncoder passwordEncoder,
             ProviderProfileRepository providerProfileRepository,
             UserAccountRepository userAccountRepository,
+            MailService mailService,
             NotificationService notificationService
     ) {
         this.bookingAdminRepository = bookingAdminRepository;
         this.passwordEncoder = passwordEncoder;
         this.providerProfileRepository = providerProfileRepository;
         this.userAccountRepository = userAccountRepository;
+        this.mailService = mailService;
         this.notificationService = notificationService;
     }
 
@@ -66,8 +69,10 @@ public class AdminService {
             throw new ConflictException("Un compte existe deja avec cet email ou ce numero de telephone.");
         }
 
-        return userAccountRepository.findById(userId)
+        UserResponse user = userAccountRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Le compte utilisateur cree est introuvable."));
+        mailService.sendLoginCredentials(user, request.password());
+        return user;
     }
 
     @Transactional(readOnly = true)

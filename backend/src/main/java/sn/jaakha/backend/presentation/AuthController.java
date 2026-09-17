@@ -9,8 +9,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import sn.jaakha.backend.application.AuthService;
 import sn.jaakha.backend.application.dto.AuthResponse;
+import sn.jaakha.backend.application.dto.ForgotPasswordRequest;
 import sn.jaakha.backend.application.dto.LoginRequest;
+import sn.jaakha.backend.application.dto.MessageResponse;
 import sn.jaakha.backend.application.dto.RegisterRequest;
+import sn.jaakha.backend.application.dto.ResetPasswordRequest;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -30,5 +33,15 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
+    }
+
+    @PostMapping("/forgot-password")
+    public MessageResponse forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return authService.forgotPassword(request);
+    }
+
+    @PostMapping("/reset-password")
+    public MessageResponse resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        return authService.resetPassword(request);
     }
 }
