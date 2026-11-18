@@ -19,12 +19,14 @@ public record AccountProfileResponse(
         String guardianFullName,
         String guardianPhone
 ) {
+    public static final String OWNER_IDENTITY_PHOTO_URL = "/api/account/me/identity-photo";
+
     public static AccountProfileResponse from(AccountProfile profile) {
         return new AccountProfileResponse(
                 profile.getId(),
                 profile.getOwnerKey(),
                 profile.getPhotoUrl(),
-                profile.getIdentityPhotoUrl(),
+                profile.getIdentityPhotoUrl() == null ? null : OWNER_IDENTITY_PHOTO_URL,
                 profile.getBio(),
                 profile.getZone(),
                 profile.getMonthlyRate(),

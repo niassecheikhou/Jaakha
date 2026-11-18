@@ -20,6 +20,8 @@ node_modules/
 *.swp
 uploads/
 backend/uploads/
+private-uploads/
+backend/private-uploads/
 data/
 backend/data/
 

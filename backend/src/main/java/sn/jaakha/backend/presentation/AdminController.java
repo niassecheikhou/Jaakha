@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
+import sn.jaakha.backend.application.AccountProfileService;
 import sn.jaakha.backend.application.AdminService;
 
 import sn.jaakha.backend.application.BookingService;
@@ -26,10 +29,16 @@ import sn.jaakha.backend.application.dto.BookingStatusRequest;
 @RequestMapping("/api/admin")
 public class AdminController {
     private final AdminService adminService;
+    private final AccountProfileService accountProfileService;
     private final CurrentUserService currentUserService;
 
-    public AdminController(AdminService adminService, CurrentUserService currentUserService) {
+    public AdminController(
+            AdminService adminService,
+            AccountProfileService accountProfileService,
+            CurrentUserService currentUserService
+    ) {
         this.adminService = adminService;
+        this.accountProfileService = accountProfileService;
         this.currentUserService = currentUserService;
     }
 
@@ -37,6 +46,12 @@ public class AdminController {
     public List<UserResponse> users(HttpServletRequest request) {
         currentUserService.requireAdmin(request);
         return adminService.users();
+    }
+
+    @GetMapping("/users/{id}/identity-photo")
+    public ResponseEntity<Resource> userIdentityPhoto(HttpServletRequest request, @PathVariable UUID id) {
+        currentUserService.requireAdmin(request);
+        return AccountProfileController.privateImage(accountProfileService.identityPhoto(id.toString()));
     }
 
     @PostMapping("/users")

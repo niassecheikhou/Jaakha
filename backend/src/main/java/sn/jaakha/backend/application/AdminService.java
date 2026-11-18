@@ -28,6 +28,7 @@ public class AdminService {
     private final UserAccountRepository userAccountRepository;
     private final MailService mailService;
     private final NotificationService notificationService;
+    private final AuthService authService;
 
     public AdminService(
             BookingAdminRepository bookingAdminRepository,
@@ -35,7 +36,8 @@ public class AdminService {
             ProviderProfileRepository providerProfileRepository,
             UserAccountRepository userAccountRepository,
             MailService mailService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            AuthService authService
     ) {
         this.bookingAdminRepository = bookingAdminRepository;
         this.passwordEncoder = passwordEncoder;
@@ -43,6 +45,7 @@ public class AdminService {
         this.userAccountRepository = userAccountRepository;
         this.mailService = mailService;
         this.notificationService = notificationService;
+        this.authService = authService;
     }
 
     @Transactional(readOnly = true)
@@ -71,7 +74,7 @@ public class AdminService {
 
         UserResponse user = userAccountRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Le compte utilisateur cree est introuvable."));
-        mailService.sendLoginCredentials(user, request.password());
+        mailService.sendAccountCreated(user, authService.issuePasswordResetUrl(user.id()));
         return user;
     }
 

@@ -191,6 +191,7 @@ export function AdminDashboard() {
           <ProviderProfilesReview
             providers={providers}
             onStatusChange={(provider, status) => providerStatusMutation.mutate({ id: provider.id, providerName: provider.fullName, status })}
+            onInspect={(provider) => setSelectedUser(usersQuery.data?.find((account) => account.id === provider.userId) ?? null)}
           />
         </div>
       )}

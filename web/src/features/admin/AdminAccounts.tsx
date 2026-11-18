@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { ProtectedImage } from '../../components/ProtectedImage'
 import type { User } from '../../types/api'
 import { formatPrice } from '../../utils/format'
 import { ArchiveIcon, CheckIcon, EyeIcon, RestoreIcon, XIcon } from './AdminIcons'
@@ -70,9 +71,9 @@ export function UserDetailPanel({
             <span>Photo du profil</span>
             {user.photoUrl ? <img src={user.photoUrl} alt={`Photo de ${user.fullName}`} /> : <strong>Non renseignee</strong>}
           </div>
-          <div>
-            <span>Piece d'identite</span>
-            {user.identityPhotoUrl ? <img src={user.identityPhotoUrl} alt={`Piece d'identite de ${user.fullName}`} /> : <strong>Non renseignee</strong>}
+          <div className="identity-document">
+            <span>Piece d'identite{user.identityPhotoUrl ? ' (cliquer pour agrandir)' : ''}</span>
+            {user.identityPhotoUrl ? <ProtectedImage src={user.identityPhotoUrl} alt={`Piece d'identite de ${user.fullName}`} zoomable /> : <strong>Non renseignee</strong>}
           </div>
         </div>
         <dl className="user-detail-grid">

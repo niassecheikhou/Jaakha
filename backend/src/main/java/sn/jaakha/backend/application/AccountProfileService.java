@@ -6,13 +6,16 @@ import sn.jaakha.backend.application.dto.AccountProfileRequest;
 import sn.jaakha.backend.application.dto.AccountProfileResponse;
 import sn.jaakha.backend.domain.model.AccountProfile;
 import sn.jaakha.backend.domain.repository.AccountProfileRepository;
+import sn.jaakha.backend.infrastructure.storage.StorageService;
 
 @Service
 public class AccountProfileService {
     private final AccountProfileRepository accountProfileRepository;
+    private final StorageService storageService;
 
-    public AccountProfileService(AccountProfileRepository accountProfileRepository) {
+    public AccountProfileService(AccountProfileRepository accountProfileRepository, StorageService storageService) {
         this.accountProfileRepository = accountProfileRepository;
+        this.storageService = storageService;
     }
 
     @Transactional
@@ -28,17 +31,24 @@ public class AccountProfileService {
     }
 
     @Transactional
-    public AccountProfileResponse updateIdentityPhoto(String ownerKey, String identityPhotoUrl) {
+    public AccountProfileResponse updateIdentityPhoto(String ownerKey, String identityPhotoFilename) {
         AccountProfile profile = getOrCreate(ownerKey);
-        profile.setIdentityPhotoUrl(identityPhotoUrl);
+        profile.setIdentityPhotoUrl(identityPhotoFilename);
         return AccountProfileResponse.from(accountProfileRepository.save(profile));
+    }
+
+    @Transactional(readOnly = true)
+    public StorageService.StoredFile identityPhoto(String ownerKey) {
+        String storedValue = accountProfileRepository.findByOwnerKey(ownerKey)
+                .map(AccountProfile::getIdentityPhotoUrl)
+                .orElseThrow(() -> new IllegalArgumentException("La piece d'identite est introuvable."));
+        return storageService.loadIdentityPhoto(storedValue);
     }
 
     @Transactional
     public AccountProfileResponse saveMine(String ownerKey, AccountProfileRequest request) {
         AccountProfile profile = getOrCreate(ownerKey);
         profile.setPhotoUrl(blankToNull(request.photoUrl()));
-        profile.setIdentityPhotoUrl(blankToNull(request.identityPhotoUrl()));
         profile.setBio(blankToNull(request.bio()));
         profile.setZone(blankToNull(request.zone()));
         profile.setMonthlyRate(request.monthlyRate());

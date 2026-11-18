@@ -2,7 +2,11 @@ package sn.jaakha.backend.presentation;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.core.io.Resource;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -70,12 +74,24 @@ public class AccountProfileController {
             @RequestParam("file") MultipartFile file
     ) {
         AuthenticatedUser user = currentUserService.requireUser(request);
-        String relativeUrl = storageService.storeIdentityPhoto(file);
-        AccountProfileResponse profile = accountProfileService.updateIdentityPhoto(
-                user.id().toString(),
-                absoluteUrl(relativeUrl)
-        );
+        String filename = storageService.storeIdentityPhoto(file);
+        AccountProfileResponse profile = accountProfileService.updateIdentityPhoto(user.id().toString(), filename);
         return new PhotoUploadResponse(profile.identityPhotoUrl());
+    }
+
+    @GetMapping("/identity-photo")
+    public ResponseEntity<Resource> identityPhoto(HttpServletRequest request) {
+        AuthenticatedUser user = currentUserService.requireUser(request);
+        return privateImage(accountProfileService.identityPhoto(user.id().toString()));
+    }
+
+    static ResponseEntity<Resource> privateImage(StorageService.StoredFile file) {
+        return ResponseEntity.ok()
+                .contentType(file.mediaType())
+                .cacheControl(CacheControl.noStore())
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(file.resource());
     }
 
     private String absoluteUrl(String relativeUrl) {

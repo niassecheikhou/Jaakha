@@ -93,28 +93,15 @@ public class AuthService {
         }
 
         UserResponse user = findById(userId);
-        mailService.sendLoginCredentials(user, request.password());
+        mailService.sendAccountCreated(user, null);
         return new AuthResponse(createToken(user.id()), user);
     }
 
     @Transactional
     public MessageResponse forgotPassword(ForgotPasswordRequest request) {
-        findByIdentifier(request.identifier()).stream().findFirst().ifPresent(user -> {
-            String token = UUID.randomUUID() + "." + UUID.randomUUID();
-            Instant expiresAt = Instant.now().plus(resetTokenTtlMinutes, ChronoUnit.MINUTES);
-            jdbcTemplate.update("""
-                            insert into password_reset_token (
-                                id, user_id, token_hash, expires_at, created_at
-                            )
-                            values (?, ?, ?, ?, current_timestamp)
-                            """,
-                    UUID.randomUUID(),
-                    user.id(),
-                    hashToken(token),
-                    Timestamp.from(expiresAt)
-            );
-            mailService.sendPasswordResetLink(user.toResponse(), resetUrl(token));
-        });
+        findByIdentifier(request.identifier()).stream().findFirst().ifPresent(user ->
+                mailService.sendPasswordResetLink(user.toResponse(), issuePasswordResetUrl(user.id()))
+        );
 
         return new MessageResponse("Si un compte correspond a ces informations, un email de reinitialisation a ete envoye.");
     }
@@ -191,6 +178,27 @@ public class AuthService {
                 Timestamp.from(expiresAt)
         );
         return token;
+    }
+
+    /**
+     * Cree un jeton de reinitialisation et retourne le lien du front pour choisir un mot de passe.
+     */
+    @Transactional
+    public String issuePasswordResetUrl(UUID userId) {
+        String token = UUID.randomUUID() + "." + UUID.randomUUID();
+        Instant expiresAt = Instant.now().plus(resetTokenTtlMinutes, ChronoUnit.MINUTES);
+        jdbcTemplate.update("""
+                        insert into password_reset_token (
+                            id, user_id, token_hash, expires_at, created_at
+                        )
+                        values (?, ?, ?, ?, current_timestamp)
+                        """,
+                UUID.randomUUID(),
+                userId,
+                hashToken(token),
+                Timestamp.from(expiresAt)
+        );
+        return resetUrl(token);
     }
 
     private String resetUrl(String token) {

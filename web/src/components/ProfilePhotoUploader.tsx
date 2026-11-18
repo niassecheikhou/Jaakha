@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState, type ChangeEvent } from 'react'
 import { accountApi, getApiError } from '../services/api'
+import { ProtectedImage } from './ProtectedImage'
 import { useToast } from './toast-context'
 
 const acceptedPhotoTypes = ['image/jpeg', 'image/png', 'image/webp']
@@ -29,7 +30,10 @@ export function ProfilePhotoUploader({
   const uploadMutation = useMutation({
     mutationFn: uploadKind === 'identity' ? accountApi.uploadIdentityPhoto : accountApi.uploadPhoto,
     onSuccess: (response) => {
-      setPhotoPreview(response.photoUrl)
+      // La piece d'identite est servie par une route protegee : on garde l'apercu local du fichier choisi.
+      if (uploadKind !== 'identity') {
+        setPhotoPreview(response.photoUrl)
+      }
       setUploadError('')
       onUploaded?.(response.photoUrl)
       toast.success('Image envoyee', `${label} a ete mise a jour avec succes.`)
@@ -69,7 +73,9 @@ export function ProfilePhotoUploader({
 
   return (
     <div className="photo-upload span-2">
-      {shownPhoto ? (
+      {uploadKind === 'identity' && !photoPreview && currentPhoto ? (
+        <ProtectedImage className="profile-photo-preview" src={currentPhoto} alt={`Apercu - ${label}`} />
+      ) : shownPhoto ? (
         <img className="profile-photo-preview" src={shownPhoto} alt={`Apercu - ${label}`} />
       ) : (
         <div className="profile-photo-placeholder">{placeholder}</div>

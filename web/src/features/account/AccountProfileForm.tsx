@@ -70,7 +70,6 @@ export function AccountProfileForm({ title, statusText, onSaved }: AccountProfil
     setError({ message: '', fields: {} })
     saveMutation.mutate({
       photoUrl: currentPhoto,
-      identityPhotoUrl: currentIdentityPhoto,
       bio: isProviderAccount ? currentBio : '',
       zone: currentZone,
       monthlyRate: isProviderAccount ? currentMonthlyRate : null,

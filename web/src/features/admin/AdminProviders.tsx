@@ -1,14 +1,16 @@
 import { StatusBadge } from '../../components/StatusBadge'
 import type { ProviderProfile, ProviderStatus } from '../../types/api'
 import { formatPrice } from '../../utils/format'
-import { CheckIcon, XIcon } from './AdminIcons'
+import { CheckIcon, EyeIcon, XIcon } from './AdminIcons'
 
 export function ProviderProfilesReview({
   providers,
   onStatusChange,
+  onInspect,
 }: {
   providers: ProviderProfile[]
   onStatusChange: (provider: ProviderProfile, status: ProviderStatus) => void
+  onInspect: (provider: ProviderProfile) => void
 }) {
   return (
     <section className="panel span-2">
@@ -28,6 +30,15 @@ export function ProviderProfilesReview({
               </div>
             </div>
             <StatusBadge status={provider.status} />
+            <button
+              aria-label={`Voir le dossier et la piece d'identite de ${provider.fullName}`}
+              className="icon-button view"
+              title="Voir le dossier (piece d'identite)"
+              type="button"
+              onClick={() => onInspect(provider)}
+            >
+              <EyeIcon />
+            </button>
             <button
               aria-label={`Valider le profil de ${provider.fullName}`}
               className="icon-button approve"

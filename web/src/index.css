@@ -1189,7 +1189,7 @@ textarea:focus {
 }
 
 .admin-provider-row {
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
 }
 
 .admin-user-row p,
@@ -1680,6 +1680,13 @@ textarea:focus {
   height: 150px;
   object-fit: cover;
   border-radius: 6px;
+}
+
+.user-detail-media .identity-document img {
+  height: 260px;
+  object-fit: contain;
+  background: var(--surface-muted);
+  cursor: zoom-in;
 }
 
 .user-detail-media strong {

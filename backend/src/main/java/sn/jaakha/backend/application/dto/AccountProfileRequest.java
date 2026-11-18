@@ -9,8 +9,6 @@ import java.util.List;
 public record AccountProfileRequest(
         String photoUrl,
 
-        String identityPhotoUrl,
-
         String bio,
 
         String zone,

@@ -175,6 +175,15 @@ export const bookingsApi = {
   },
 }
 
+export const privateFilesApi = {
+  // Les chemins renvoyes par le backend commencent par /api : on les resout depuis l'origine de l'API.
+  async image(path: string) {
+    const apiOrigin = new URL(api.defaults.baseURL ?? '', window.location.origin).origin
+    const { data } = await api.get<Blob>(path, { baseURL: apiOrigin, responseType: 'blob' })
+    return data
+  },
+}
+
 export const reviewsApi = {
   async create(payload: ReviewPayload) {
     const { data } = await api.post<Review>('/reviews', payload)

@@ -32,32 +32,45 @@ public class MailService {
         this.frontendUrl = frontendUrl;
     }
 
-    public void sendLoginCredentials(UserResponse user, String rawPassword) {
+    /**
+     * Email de bienvenue, sans mot de passe. Si passwordSetupUrl est fourni (compte cree par un admin),
+     * le bouton invite a choisir son mot de passe ; sinon il renvoie vers la connexion.
+     */
+    public void sendAccountCreated(UserResponse user, String passwordSetupUrl) {
         if (user.email() == null || user.email().isBlank()) {
             return;
         }
 
-        String loginUrl = loginUrl();
+        boolean needsPasswordSetup = passwordSetupUrl != null;
+        String actionUrl = needsPasswordSetup ? passwordSetupUrl : loginUrl();
+        String actionLabel = needsPasswordSetup ? "Choisir mon mot de passe" : "Se connecter";
+        String intro = needsPasswordSetup
+                ? "Un administrateur a cree votre compte Jaankha. Choisissez votre mot de passe pour vous connecter."
+                : "Votre compte Jaankha a ete cree. Connectez-vous avec le mot de passe que vous avez choisi.";
+        String expiryNote = needsPasswordSetup
+                ? "Ce lien expire bientot. Une fois expire, utilisez \"Mot de passe oublie\" sur la page de connexion."
+                : "";
+
         String plainText = """
                 Bonjour %s,
 
-                Votre compte Jaankha a ete cree.
-
-                Parametres de connexion:
-                Email: %s
-                Telephone: %s
-                Mot de passe: %s
-
-                Connectez-vous puis completez votre dossier pour permettre la validation du compte:
                 %s
+
+                Identifiant: %s ou %s
+
+                %s
+
+                %s
+                Completez ensuite votre dossier pour permettre la validation du compte.
 
                 Equipe Jaankha
                 """.formatted(
                 user.fullName(),
+                intro,
                 user.email(),
                 user.phone(),
-                rawPassword,
-                loginUrl
+                actionUrl,
+                expiryNote
         );
 
         String html = """
@@ -72,29 +85,25 @@ public class MailService {
                               <td>
                                 <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;color:#212e53;">Votre compte Jaankha est pret</h1>
                                 <p style="margin:0 0 14px;font-size:16px;line-height:1.6;">Bonjour %s,</p>
-                                <p style="margin:0 0 18px;font-size:16px;line-height:1.6;">Votre compte Jaankha a ete cree. Voici vos parametres de connexion :</p>
+                                <p style="margin:0 0 18px;font-size:16px;line-height:1.6;">%s</p>
                                 <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="margin:0 0 22px;border-collapse:collapse;background:#f5f7fb;border-radius:10px;overflow:hidden;">
                                   <tr>
                                     <td style="padding:12px 14px;font-size:14px;color:#5f6b85;border-bottom:1px solid #dfe6ef;">Email</td>
                                     <td style="padding:12px 14px;font-size:14px;color:#212e53;font-weight:700;border-bottom:1px solid #dfe6ef;">%s</td>
                                   </tr>
                                   <tr>
-                                    <td style="padding:12px 14px;font-size:14px;color:#5f6b85;border-bottom:1px solid #dfe6ef;">Telephone</td>
-                                    <td style="padding:12px 14px;font-size:14px;color:#212e53;font-weight:700;border-bottom:1px solid #dfe6ef;">%s</td>
-                                  </tr>
-                                  <tr>
-                                    <td style="padding:12px 14px;font-size:14px;color:#5f6b85;">Mot de passe</td>
+                                    <td style="padding:12px 14px;font-size:14px;color:#5f6b85;">Telephone</td>
                                     <td style="padding:12px 14px;font-size:14px;color:#212e53;font-weight:700;">%s</td>
                                   </tr>
                                 </table>
                                 <p style="margin:0 0 24px;">
-                                  <a href="%s" style="display:inline-block;background:#4a919e;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 22px;border-radius:8px;">Se connecter</a>
+                                  <a href="%s" style="display:inline-block;background:#4a919e;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 22px;border-radius:8px;">%s</a>
                                 </p>
                                 <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#5f6b85;">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :</p>
                                 <p style="margin:0 0 22px;font-size:14px;line-height:1.6;word-break:break-all;">
                                   <a href="%s" style="color:#4a919e;">%s</a>
                                 </p>
-                                <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#5f6b85;">Connectez-vous puis completez votre dossier pour permettre la validation du compte.</p>
+                                <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#5f6b85;">%s Completez ensuite votre dossier pour permettre la validation du compte.</p>
                                 <p style="margin:0;font-size:15px;line-height:1.6;color:#212e53;">Equipe Jaankha</p>
                               </td>
                             </tr>
@@ -106,15 +115,17 @@ public class MailService {
                 </html>
                 """.formatted(
                 escapeHtml(user.fullName()),
+                escapeHtml(intro),
                 escapeHtml(user.email()),
                 escapeHtml(user.phone()),
-                escapeHtml(rawPassword),
-                escapeHtml(loginUrl),
-                escapeHtml(loginUrl),
-                escapeHtml(loginUrl)
+                escapeHtml(actionUrl),
+                escapeHtml(actionLabel),
+                escapeHtml(actionUrl),
+                escapeHtml(actionUrl),
+                escapeHtml(expiryNote)
         );
 
-        sendHtml(user.email(), "Vos parametres de connexion Jaankha", plainText, html);
+        sendHtml(user.email(), "Votre compte Jaankha est pret", plainText, html);
     }
 
     public void sendPasswordResetLink(UserResponse user, String resetUrl) {

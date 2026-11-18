@@ -116,7 +116,7 @@ public class UserAccountRepository {
                 resultSet.getBoolean("active"),
                 resultSet.getBoolean("archived"),
                 resultSet.getString("photo_url"),
-                resultSet.getString("identity_photo_url"),
+                adminIdentityPhotoUrl(resultSet),
                 resultSet.getString("bio"),
                 resultSet.getString("zone"),
                 resultSet.getBigDecimal("monthly_rate"),
@@ -125,6 +125,13 @@ public class UserAccountRepository {
                 resultSet.getString("guardian_full_name"),
                 resultSet.getString("guardian_phone")
         );
+    }
+
+    private String adminIdentityPhotoUrl(ResultSet resultSet) throws SQLException {
+        if (resultSet.getString("identity_photo_url") == null) {
+            return null;
+        }
+        return "/api/admin/users/" + resultSet.getObject("id", UUID.class) + "/identity-photo";
     }
 
     private List<String> splitSkills(String skills) {

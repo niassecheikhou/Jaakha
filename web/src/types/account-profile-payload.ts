@@ -1,6 +1,5 @@
 export type AccountProfilePayload = {
   photoUrl: string
-  identityPhotoUrl: string
   bio: string
   zone: string
   monthlyRate: number | null
