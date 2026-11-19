@@ -1697,7 +1697,8 @@ textarea:focus {
 }
 
 /* Colonne "Actions" : un seul bouton de menu, aligne a droite. */
-.admin-table .actions-column {
+.admin-table .actions-column,
+.booking-table .actions-column {
   width: 1%;
   text-align: right;
   white-space: nowrap;
@@ -2365,15 +2366,6 @@ textarea:focus {
   padding: 5px 10px;
   border-radius: 7px;
   font-size: 12px;
-}
-
-.booking-table select {
-  min-width: 136px;
-  min-height: 38px;
-  padding: 8px 10px;
-  color: var(--text);
-  background: var(--surface);
-  font-size: 13px;
 }
 
 .employer-bookings-panel {

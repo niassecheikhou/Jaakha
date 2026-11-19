@@ -106,3 +106,19 @@ export function DashboardIcon() {
     </svg>
   )
 }
+
+export function PlayIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <path d="M7 5v14l11-7L7 5Z" />
+    </svg>
+  )
+}
+
+export function FlagIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
+    </svg>
+  )
+}

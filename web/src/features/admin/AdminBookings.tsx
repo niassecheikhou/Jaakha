@@ -1,12 +1,53 @@
 import { useState, type ReactNode } from 'react'
+import { ActionsMenu, type ActionsMenuItem } from '../../components/ActionsMenu'
 import { StatusBadge } from '../../components/StatusBadge'
 import type { Booking, BookingStatus, ProviderProfile, User } from '../../types/api'
 import { formatPrice, formatStatus } from '../../utils/format'
-import { ActivityIcon } from './AdminIcons'
+import { ActivityIcon, CheckIcon, FlagIcon, PlayIcon, XIcon } from './AdminIcons'
 import { bookingReference } from './admin-booking-utils'
 import { displayRole } from './admin-utils'
 
-const bookingStatuses: BookingStatus[] = ['REQUESTED', 'ACCEPTED', 'IN_PROGRESS', 'DONE', 'CANCELLED']
+// Actions possibles selon le statut, alignees sur le cycle impose par le backend (BookingStatusPolicy) :
+// REQUESTED -> ACCEPTED -> IN_PROGRESS -> DONE, annulation possible tant que la mission n'est pas terminee.
+// DONE et CANCELLED sont definitifs : aucune action.
+function bookingActions(
+  booking: Booking,
+  loading: boolean,
+  onStatusChange: (booking: Booking, status: BookingStatus) => void,
+): ActionsMenuItem[] {
+  const change = (status: BookingStatus) => () => onStatusChange(booking, status)
+  const cancel: ActionsMenuItem = {
+    id: 'cancel',
+    label: 'Annuler la reservation',
+    icon: <XIcon />,
+    tone: 'reject',
+    disabled: loading,
+    onSelect: () => {
+      if (window.confirm(`Annuler la reservation ${bookingReference(booking.id)} ? Cette action est definitive.`)) {
+        onStatusChange(booking, 'CANCELLED')
+      }
+    },
+  }
+  switch (booking.status) {
+    case 'REQUESTED':
+      return [
+        { id: 'accept', label: 'Accepter la reservation', icon: <CheckIcon />, tone: 'approve', disabled: loading, onSelect: change('ACCEPTED') },
+        cancel,
+      ]
+    case 'ACCEPTED':
+      return [
+        { id: 'start', label: 'Demarrer la mission', icon: <PlayIcon />, tone: 'view', disabled: loading, onSelect: change('IN_PROGRESS') },
+        cancel,
+      ]
+    case 'IN_PROGRESS':
+      return [
+        { id: 'done', label: 'Marquer comme terminee', icon: <FlagIcon />, tone: 'approve', disabled: loading, onSelect: change('DONE') },
+        cancel,
+      ]
+    default:
+      return []
+  }
+}
 const estimatedHourlyRate = 5000
 const monthLabelFormatter = new Intl.DateTimeFormat('fr-FR', { month: 'short' })
 
@@ -302,7 +343,7 @@ function RecentBookingsTable({
                 <th>Client</th>
                 <th>Statut</th>
                 <th>Montant</th>
-                <th>Action</th>
+                <th className="actions-column">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -317,19 +358,15 @@ function RecentBookingsTable({
                   <td>{booking.employerName}</td>
                   <td><StatusBadge status={booking.status} /></td>
                   <td>{formatPrice(bookingAmount(booking))}</td>
-                  <td>
-                    <select
-                      aria-label={`Changer le statut de la reservation ${bookingReference(booking.id)}`}
-                      disabled={loading}
-                      value={booking.status}
-                      onChange={(event) => onStatusChange(booking, event.target.value as BookingStatus)}
-                    >
-                      {bookingStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {formatStatus(status)}
-                        </option>
-                      ))}
-                    </select>
+                  <td className="actions-column">
+                    {booking.status === 'DONE' || booking.status === 'CANCELLED' ? (
+                      <span className="muted">Cloturee</span>
+                    ) : (
+                      <ActionsMenu
+                        subject={`la reservation ${bookingReference(booking.id)}`}
+                        items={bookingActions(booking, loading, onStatusChange)}
+                      />
+                    )}
                   </td>
                 </tr>
               ))}
