@@ -72,8 +72,12 @@ export function UserDetailPanel({
             {user.photoUrl ? <img src={user.photoUrl} alt={`Photo de ${user.fullName}`} /> : <strong>Non renseignee</strong>}
           </div>
           <div className="identity-document">
-            <span>Piece d'identite{user.identityPhotoUrl ? ' (cliquer pour agrandir)' : ''}</span>
-            {user.identityPhotoUrl ? <ProtectedImage src={user.identityPhotoUrl} alt={`Piece d'identite de ${user.fullName}`} zoomable /> : <strong>Non renseignee</strong>}
+            <span>CNI recto{user.identityPhotoUrl ? ' (cliquer pour agrandir)' : ''}</span>
+            {user.identityPhotoUrl ? <ProtectedImage src={user.identityPhotoUrl} alt={`Recto de la piece d'identite de ${user.fullName}`} zoomable /> : <strong>Non renseigne</strong>}
+          </div>
+          <div className="identity-document">
+            <span>CNI verso{user.identityPhotoBackUrl ? ' (cliquer pour agrandir)' : ''}</span>
+            {user.identityPhotoBackUrl ? <ProtectedImage src={user.identityPhotoBackUrl} alt={`Verso de la piece d'identite de ${user.fullName}`} zoomable /> : <strong>Non renseigne</strong>}
           </div>
         </div>
         <dl className="user-detail-grid">

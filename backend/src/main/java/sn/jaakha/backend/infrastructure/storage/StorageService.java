@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -75,16 +76,38 @@ public class StorageService {
      * (nom du fichier, ou ancienne URL publique /uploads/identity-documents/...).
      */
     public StoredFile loadIdentityPhoto(String storedValue) {
-        String filename = storedValue == null ? "" : storedValue.substring(storedValue.lastIndexOf('/') + 1);
-        if (!STORED_FILENAME.matcher(filename).matches()) {
-            throw new IllegalArgumentException("La piece d'identite est introuvable.");
-        }
-        Path file = privateUploadPath.resolve(IDENTITY_FOLDER).resolve(filename).normalize();
-        if (!Files.isRegularFile(file)) {
-            throw new IllegalArgumentException("La piece d'identite est introuvable.");
-        }
+        Path file = identityFile(storedValue)
+                .filter(Files::isRegularFile)
+                .orElseThrow(() -> new IllegalArgumentException("La piece d'identite est introuvable."));
+        String filename = file.getFileName().toString();
         String extension = filename.substring(filename.lastIndexOf('.') + 1);
         return new StoredFile(new PathResource(file), MEDIA_TYPES_BY_EXTENSION.get(extension));
+    }
+
+    /**
+     * Supprime une piece d'identite remplacee (donnee personnelle : on ne garde pas d'anciennes copies).
+     * Un echec est journalise sans bloquer la mise a jour du dossier.
+     */
+    public void deleteIdentityPhoto(String storedValue) {
+        identityFile(storedValue).ifPresent(file -> {
+            try {
+                Files.deleteIfExists(file);
+            } catch (IOException exception) {
+                LOGGER.warn("Ancienne piece d'identite non supprimee : {}", file.getFileName(), exception);
+            }
+        });
+    }
+
+    /**
+     * Chemin d'une piece d'identite dans le stockage prive, uniquement pour un nom de fichier genere
+     * par le stockage (UUID + extension) : aucun chemin arbitraire ne peut etre resolu.
+     */
+    private Optional<Path> identityFile(String storedValue) {
+        String filename = storedValue == null ? "" : storedValue.substring(storedValue.lastIndexOf('/') + 1);
+        if (!STORED_FILENAME.matcher(filename).matches()) {
+            return Optional.empty();
+        }
+        return Optional.of(privateUploadPath.resolve(IDENTITY_FOLDER).resolve(filename).normalize());
     }
 
     /**
@@ -128,9 +151,12 @@ public class StorageService {
         }
     }
 
-    private void validateImage(MultipartFile file) {
+    /**
+     * Verifie qu'un fichier est une image acceptee (JPG, PNG, WEBP), sans l'enregistrer.
+     */
+    public void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("La photo du profil est obligatoire.");
+            throw new IllegalArgumentException("L'image est vide ou absente.");
         }
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType)) {

@@ -1,25 +1,21 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, type ChangeEvent } from 'react'
 import { accountApi, getApiError } from '../services/api'
-import { ProtectedImage } from './ProtectedImage'
+import { acceptedImageAccept, imageFileError } from '../utils/image-file'
 import { useToast } from './toast-context'
-
-const acceptedPhotoTypes = ['image/jpeg', 'image/png', 'image/webp']
-const maxPhotoSizeInBytes = 5 * 1024 * 1024
 
 type ProfilePhotoUploaderProps = {
   currentPhoto?: string | null
   label?: string
   placeholder?: string
-  uploadKind?: 'profile' | 'identity'
   onUploaded?: (photoUrl: string) => void
 }
 
+// Photo de profil (publique). La piece d'identite a son propre composant : IdentityDocumentUploader.
 export function ProfilePhotoUploader({
   currentPhoto,
   label = 'Photo du profil',
   placeholder = 'Photo',
-  uploadKind = 'profile',
   onUploaded,
 }: ProfilePhotoUploaderProps) {
   const toast = useToast()
@@ -29,12 +25,9 @@ export function ProfilePhotoUploader({
   const shownPhoto = photoPreview || currentPhoto || ''
 
   const uploadMutation = useMutation({
-    mutationFn: uploadKind === 'identity' ? accountApi.uploadIdentityPhoto : accountApi.uploadPhoto,
+    mutationFn: accountApi.uploadPhoto,
     onSuccess: (response) => {
-      // La piece d'identite est servie par une route protegee : on garde l'apercu local du fichier choisi.
-      if (uploadKind !== 'identity') {
-        setPhotoPreview(response.photoUrl)
-      }
+      setPhotoPreview(response.photoUrl)
       setUploadError('')
       // Rafraichit l'avatar, le dossier et (prestataire) le profil public.
       void queryClient.invalidateQueries({ queryKey: ['account', 'me'] })
@@ -44,6 +37,7 @@ export function ProfilePhotoUploader({
     },
     onError: (caughtError) => {
       const apiError = getApiError(caughtError)
+      setPhotoPreview('')
       setUploadError(`${apiError.message} L'image n'a pas ete modifiee.`)
       toast.error('Upload impossible', apiError.message)
     },
@@ -54,19 +48,11 @@ export function ProfilePhotoUploader({
     if (!file) {
       return
     }
-    if (!acceptedPhotoTypes.includes(file.type)) {
-      const message = 'Format non accepte. Choisis une image au format JPG, PNG ou WEBP.'
+    const error = imageFileError(file)
+    if (error) {
       setPhotoPreview('')
-      setUploadError(message)
-      toast.error('Image refusee', message)
-      event.currentTarget.value = ''
-      return
-    }
-    if (file.size > maxPhotoSizeInBytes) {
-      const message = "L'image est trop lourde. Choisis une image de 5 Mo maximum."
-      setPhotoPreview('')
-      setUploadError(message)
-      toast.error('Image refusee', message)
+      setUploadError(error)
+      toast.error('Image refusee', error)
       event.currentTarget.value = ''
       return
     }
@@ -77,16 +63,14 @@ export function ProfilePhotoUploader({
 
   return (
     <div className="photo-upload span-2">
-      {uploadKind === 'identity' && !photoPreview && currentPhoto ? (
-        <ProtectedImage className="profile-photo-preview" src={currentPhoto} alt={`Apercu - ${label}`} />
-      ) : shownPhoto ? (
+      {shownPhoto ? (
         <img className="profile-photo-preview" src={shownPhoto} alt={`Apercu - ${label}`} />
       ) : (
         <div className="profile-photo-placeholder">{placeholder}</div>
       )}
       <label>
         {label}
-        <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePhotoChange} />
+        <input type="file" accept={acceptedImageAccept} onChange={handlePhotoChange} />
       </label>
       <span className="muted">
         {uploadMutation.isPending ? 'Upload en cours...' : 'Formats acceptes: JPG, PNG ou WEBP.'}

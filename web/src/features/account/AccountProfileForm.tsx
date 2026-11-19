@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { FormError } from '../../components/FormError'
+import { IdentityDocumentUploader } from '../../components/IdentityDocumentUploader'
 import { ProfilePhotoUploader } from '../../components/ProfilePhotoUploader'
 import { useToast } from '../../components/toast-context'
 import { accountApi, getApiError } from '../../services/api'
@@ -24,7 +25,6 @@ export function AccountProfileForm({ title, statusText, onSaved }: AccountProfil
   })
 
   const [photoUrl, setPhotoUrl] = useState<string>()
-  const [identityPhotoUrl, setIdentityPhotoUrl] = useState<string>()
   const [bio, setBio] = useState<string>()
   const [zone, setZone] = useState<string>()
   const [monthlyRate, setMonthlyRate] = useState<number>()
@@ -36,7 +36,6 @@ export function AccountProfileForm({ title, statusText, onSaved }: AccountProfil
 
   const profile = profileQuery.data
   const currentPhoto = photoUrl || profile?.photoUrl || ''
-  const currentIdentityPhoto = identityPhotoUrl || profile?.identityPhotoUrl || ''
   const currentBio = bio ?? profile?.bio ?? ''
   const currentZone = zone ?? profile?.zone ?? ''
   const currentMonthlyRate = monthlyRate ?? Number(profile?.monthlyRate ?? 0)
@@ -86,13 +85,7 @@ export function AccountProfileForm({ title, statusText, onSaved }: AccountProfil
       <form className="form-grid" onSubmit={handleSubmit}>
         <FormError message={error.message} fields={error.fields} />
         <ProfilePhotoUploader currentPhoto={currentPhoto} onUploaded={setPhotoUrl} />
-        <ProfilePhotoUploader
-          currentPhoto={currentIdentityPhoto}
-          label="Photo de la piece d'identite"
-          placeholder="Piece"
-          uploadKind="identity"
-          onUploaded={setIdentityPhotoUrl}
-        />
+        <IdentityDocumentUploader frontUrl={profile?.identityPhotoUrl} backUrl={profile?.identityPhotoBackUrl} />
         {user?.role === 'EMPLOYEUR' && (
           <div className="account-summary span-2">
             <div><span>Nom complet</span><strong>{user.fullName}</strong></div>

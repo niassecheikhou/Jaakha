@@ -4,6 +4,7 @@ export function isProfileComplete(user: User) {
   const hasCommonProfile = Boolean(
     user.photoUrl
       && user.identityPhotoUrl
+      && user.identityPhotoBackUrl
       && user.fullName
       && user.phone
       && user.zone,

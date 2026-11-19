@@ -24,6 +24,7 @@ import sn.jaakha.backend.application.dto.BookingResponse;
 import sn.jaakha.backend.application.dto.ProviderProfileResponse;
 import sn.jaakha.backend.application.dto.StatusUpdateRequest;
 import sn.jaakha.backend.application.dto.UserResponse;
+import sn.jaakha.backend.domain.enums.IdentityDocumentSide;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -51,7 +52,13 @@ public class AdminController {
     @GetMapping("/users/{id}/identity-photo")
     public ResponseEntity<Resource> userIdentityPhoto(HttpServletRequest request, @PathVariable UUID id) {
         currentUserService.requireAdmin(request);
-        return AccountProfileController.privateImage(accountProfileService.identityPhoto(id.toString()));
+        return AccountProfileController.privateImage(accountProfileService.identityPhoto(id.toString(), IdentityDocumentSide.FRONT));
+    }
+
+    @GetMapping("/users/{id}/identity-photo/back")
+    public ResponseEntity<Resource> userIdentityPhotoBack(HttpServletRequest request, @PathVariable UUID id) {
+        currentUserService.requireAdmin(request);
+        return AccountProfileController.privateImage(accountProfileService.identityPhoto(id.toString(), IdentityDocumentSide.BACK));
     }
 
     @PostMapping("/users")
