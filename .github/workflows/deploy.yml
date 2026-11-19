@@ -1,10 +1,17 @@
+# Livraison continue de JAANKHA.
+# - A chaque fusion sur main : pipeline CI complet, puis publication des images Docker
+#   (backend + web) sur GitHub Container Registry, puis deploiement en "staging".
+# - "production" : uniquement en lancement manuel (Actions > Deploy > Run workflow),
+#   avec validation possible via les regles de l'environnement GitHub "production".
 name: Deploy
 
 on:
+  push:
+    branches: ["main"]
   workflow_dispatch:
     inputs:
       environment:
-        description: "Target environment"
+        description: "Environnement cible"
         required: true
         default: "staging"
         type: choice
@@ -12,40 +19,98 @@ on:
           - staging
           - production
 
-jobs:
-  package:
-    runs-on: ubuntu-latest
+permissions:
+  contents: read
 
+concurrency:
+  group: deploy-${{ inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: Publier les images Docker
+    runs-on: ubuntu-latest
+    needs: ci
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      backend-image: ${{ steps.names.outputs.backend }}
+      web-image: ${{ steps.names.outputs.web }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: maven
-
-      - name: Build backend artifact
-        working-directory: backend
-        run: ./mvnw --batch-mode -DskipTests package
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Build web artifact
-        working-directory: web
+      - name: Noms des images
+        id: names
         run: |
-          npm ci
-          npm run build
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "backend=ghcr.io/${owner}/jaakha-backend" >> "$GITHUB_OUTPUT"
+          echo "web=ghcr.io/${owner}/jaakha-web" >> "$GITHUB_OUTPUT"
 
-      - name: Build backend Docker image
-        run: docker build -t jaakha-backend:${{ github.sha }} ./backend
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Deployment placeholder
-        run: echo "Artifacts built for ${{ inputs.environment }}. Add host/cloud-specific deployment steps here."
+      - name: Connexion a GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ steps.names.outputs.backend }}:${{ github.sha }}
+            ${{ steps.names.outputs.backend }}:${{ inputs.environment || 'staging' }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Image web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          push: true
+          # "/api" : Nginx relaie vers le backend, configure au demarrage via BACKEND_URL.
+          build-args: |
+            VITE_API_BASE_URL=/api
+          tags: |
+            ${{ steps.names.outputs.web }}:${{ github.sha }}
+            ${{ steps.names.outputs.web }}:${{ inputs.environment || 'staging' }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+  deploy:
+    name: Deployer (${{ inputs.environment || 'staging' }})
+    runs-on: ubuntu-latest
+    needs: publish
+    environment: ${{ inputs.environment || 'staging' }}
+    steps:
+      - name: Declencher le deploiement chez l'hebergeur
+        env:
+          # Secrets a definir dans Settings > Environments > staging / production.
+          # Render et Railway fournissent une URL "deploy hook" a appeler en POST.
+          BACKEND_DEPLOY_HOOK_URL: ${{ secrets.BACKEND_DEPLOY_HOOK_URL }}
+          WEB_DEPLOY_HOOK_URL: ${{ secrets.WEB_DEPLOY_HOOK_URL }}
+        run: |
+          echo "Images : ${{ needs.publish.outputs.backend-image }}:${{ github.sha }}"
+          echo "         ${{ needs.publish.outputs.web-image }}:${{ github.sha }}"
+          deployed=0
+          if [[ -n "$BACKEND_DEPLOY_HOOK_URL" ]]; then
+            curl -fsS -X POST "$BACKEND_DEPLOY_HOOK_URL" > /dev/null && echo "Backend : deploiement declenche."
+            deployed=1
+          fi
+          if [[ -n "$WEB_DEPLOY_HOOK_URL" ]]; then
+            curl -fsS -X POST "$WEB_DEPLOY_HOOK_URL" > /dev/null && echo "Web : deploiement declenche."
+            deployed=1
+          fi
+          if [[ "$deployed" -eq 0 ]]; then
+            echo "::warning::Aucun deploy hook configure pour cet environnement : images publiees, rien n'a ete deploye."
+          fi

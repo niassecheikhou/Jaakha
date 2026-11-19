@@ -1,0 +1,4 @@
+# Scripts executes sur les runners Linux de la CI et dans les conteneurs : toujours en LF.
+*.sh text eol=lf
+*.conf.template text eol=lf
+Dockerfile text eol=lf

@@ -1,0 +1,120 @@
+# Pipeline d'integration continue de JAANKHA.
+# Tourne sur chaque pull request (et sur main via deploy.yml) ; le job final "CI OK" est le controle
+# obligatoire de la protection de branche : une PR ne peut etre fusionnee que s'il est vert.
+# Pas de filtre "paths" : un controle obligatoire filtre resterait "en attente" et bloquerait la PR.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+  # Reutilise par deploy.yml : rien n'est publie sans un pipeline vert sur le commit deploye.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: Backend (tests Maven)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Compiler, tester et packager
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+
+      - name: Rapports de tests (en cas d'echec)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-surefire-reports
+          path: backend/target/surefire-reports/
+          retention-days: 7
+
+  web:
+    name: Web (lint, build, audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Installer les dependances
+        run: npm ci --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build (TypeScript strict + Vite)
+        run: npm run build
+
+      - name: Audit des dependances de production
+        run: npm audit --omit=dev --audit-level=high
+
+  docker:
+    name: Docker (stack complete + tests de fumee)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [backend, web]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Construire les images
+        run: docker compose build
+
+      - name: Demarrer postgres, backend et web
+        run: docker compose up -d --wait --wait-timeout 300
+
+      - name: Tests de fumee (navigateur -> Nginx -> API -> PostgreSQL)
+        run: bash .github/scripts/smoke-test.sh http://localhost:8081 http://localhost:8080
+
+      - name: Journaux des conteneurs (en cas d'echec)
+        if: failure()
+        run: docker compose logs --no-color --tail=300
+
+      - name: Arreter la stack
+        if: always()
+        run: docker compose down -v
+
+  ci-ok:
+    name: CI OK
+    runs-on: ubuntu-latest
+    needs: [backend, web, docker]
+    if: always()
+    steps:
+      - name: Verifier que tous les jobs ont reussi
+        run: |
+          echo "backend=${{ needs.backend.result }} web=${{ needs.web.result }} docker=${{ needs.docker.result }}"
+          if [[ "${{ needs.backend.result }}" != "success" \
+             || "${{ needs.web.result }}" != "success" \
+             || "${{ needs.docker.result }}" != "success" ]]; then
+            echo "::error::Le pipeline n'est pas entierement vert : fusion interdite."
+            exit 1
+          fi
