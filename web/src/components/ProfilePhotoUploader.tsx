@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, type ChangeEvent } from 'react'
 import { accountApi, getApiError } from '../services/api'
 import { ProtectedImage } from './ProtectedImage'
@@ -23,6 +23,7 @@ export function ProfilePhotoUploader({
   onUploaded,
 }: ProfilePhotoUploaderProps) {
   const toast = useToast()
+  const queryClient = useQueryClient()
   const [photoPreview, setPhotoPreview] = useState('')
   const [uploadError, setUploadError] = useState('')
   const shownPhoto = photoPreview || currentPhoto || ''
@@ -35,6 +36,9 @@ export function ProfilePhotoUploader({
         setPhotoPreview(response.photoUrl)
       }
       setUploadError('')
+      // Rafraichit l'avatar, le dossier et (prestataire) le profil public.
+      void queryClient.invalidateQueries({ queryKey: ['account', 'me'] })
+      void queryClient.invalidateQueries({ queryKey: ['providers', 'me'] })
       onUploaded?.(response.photoUrl)
       toast.success('Image envoyee', `${label} a ete mise a jour avec succes.`)
     },

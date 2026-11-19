@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { UserAvatar } from './UserAvatar'
 
 export type WorkspaceNavItem<T extends string> = {
   id: T
@@ -32,6 +33,7 @@ export function WorkspaceShell<T extends string>({
     <section className="workspace-shell">
       <aside className="workspace-sidebar" aria-label={`Navigation ${title}`}>
         <div className="workspace-user-card">
+          <UserAvatar name={userName} />
           <strong>{userName}</strong>
           {userContact && <span>{userContact}</span>}
         </div>

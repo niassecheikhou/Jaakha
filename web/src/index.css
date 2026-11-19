@@ -747,6 +747,27 @@ textarea:focus {
   font-weight: 750;
 }
 
+/* Avatar de l'utilisateur connecte (photo de profil ou initiales). */
+.workspace-user-card .user-avatar {
+  justify-self: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: 3px solid var(--surface);
+  box-shadow: 0 0 0 2px var(--primary);
+  object-fit: cover;
+}
+
+.workspace-user-card .user-avatar-initials {
+  display: grid;
+  place-items: center;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
 .workspace-nav {
   display: grid;
   gap: 8px;
