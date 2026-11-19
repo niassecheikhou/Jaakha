@@ -122,6 +122,8 @@ public class StorageService {
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
             return folder + "/" + filename;
         } catch (IOException exception) {
+            // Cause technique journalisee (droits du dossier, disque plein...) ; message generique pour l'utilisateur.
+            LOGGER.error("Echec d'ecriture de la photo dans {}/{}", root, folder, exception);
             throw new IllegalArgumentException("La photo n'a pas pu etre enregistree. Merci de reessayer.");
         }
     }
