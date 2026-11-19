@@ -23,7 +23,7 @@ public class UserAccountRepository {
     public List<UserResponse> findAll() {
         return jdbcTemplate.query("""
                         select u.id, u.full_name, u.email, u.phone, u.role, u.email_verified,
-                               u.active, u.archived, p.photo_url, p.identity_photo_url,
+                               u.active, u.archived, p.photo_url, p.identity_photo_url, p.identity_photo_back_url,
                                p.bio, p.zone, p.monthly_rate, p.experience_years,
                                p.skills, p.guardian_full_name, p.guardian_phone
                         from app_user u
@@ -37,7 +37,7 @@ public class UserAccountRepository {
     public Optional<UserResponse> findById(UUID id) {
         List<UserResponse> users = jdbcTemplate.query("""
                         select u.id, u.full_name, u.email, u.phone, u.role, u.email_verified,
-                               u.active, u.archived, p.photo_url, p.identity_photo_url,
+                               u.active, u.archived, p.photo_url, p.identity_photo_url, p.identity_photo_back_url,
                                p.bio, p.zone, p.monthly_rate, p.experience_years,
                                p.skills, p.guardian_full_name, p.guardian_phone
                         from app_user u
@@ -116,7 +116,8 @@ public class UserAccountRepository {
                 resultSet.getBoolean("active"),
                 resultSet.getBoolean("archived"),
                 resultSet.getString("photo_url"),
-                adminIdentityPhotoUrl(resultSet),
+                adminIdentityPhotoUrl(resultSet, "identity_photo_url", ""),
+                adminIdentityPhotoUrl(resultSet, "identity_photo_back_url", "/back"),
                 resultSet.getString("bio"),
                 resultSet.getString("zone"),
                 resultSet.getBigDecimal("monthly_rate"),
@@ -127,11 +128,14 @@ public class UserAccountRepository {
         );
     }
 
-    private String adminIdentityPhotoUrl(ResultSet resultSet) throws SQLException {
-        if (resultSet.getString("identity_photo_url") == null) {
+    /**
+     * URL protegee (reservee a l'admin) d'une face de la piece d'identite, ou null si elle n'est pas deposee.
+     */
+    private String adminIdentityPhotoUrl(ResultSet resultSet, String column, String sidePath) throws SQLException {
+        if (resultSet.getString(column) == null) {
             return null;
         }
-        return "/api/admin/users/" + resultSet.getObject("id", UUID.class) + "/identity-photo";
+        return "/api/admin/users/" + resultSet.getObject("id", UUID.class) + "/identity-photo" + sidePath;
     }
 
     private List<String> splitSkills(String skills) {

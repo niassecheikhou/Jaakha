@@ -74,6 +74,22 @@ if [[ -n "$TOKEN" ]]; then
   fi
   check "upload photo sans token -> 401" 401 \
     "$(status -X POST "$WEB_URL/api/account/me/photo" -F "file=@$PHOTO_FILE;type=image/png")"
+
+  # Piece d'identite : recto + verso en une requete, puis lecture privee de chaque face.
+  check "upload CNI recto + verso /api/account/me/identity-photos" 200 \
+    "$(status -X POST "$WEB_URL/api/account/me/identity-photos" -H "Authorization: Bearer $TOKEN" \
+      -F "front=@$PHOTO_FILE;type=image/png" -F "back=@$PHOTO_FILE;type=image/png")"
+  PHOTO_AFTER_ID=$(curl -s -H "Authorization: Bearer $TOKEN" "$WEB_URL/api/account/me" \
+    | sed -n 's/.*"photoUrl":"\([^"]*\)".*/\1/p')
+  check "la CNI ne remplace pas la photo de profil" "$PHOTO_URL" "$PHOTO_AFTER_ID"
+  check "lecture CNI recto avec token" 200 \
+    "$(status -H "Authorization: Bearer $TOKEN" "$WEB_URL/api/account/me/identity-photo")"
+  check "lecture CNI verso avec token" 200 \
+    "$(status -H "Authorization: Bearer $TOKEN" "$WEB_URL/api/account/me/identity-photo/back")"
+  check "lecture CNI verso sans token -> 401" 401 \
+    "$(status "$WEB_URL/api/account/me/identity-photo/back")"
+  check "upload CNI sans aucune face -> 400" 400 \
+    "$(status -X POST "$WEB_URL/api/account/me/identity-photos" -H "Authorization: Bearer $TOKEN" -F "autre=x")"
   rm -f "$PHOTO_FILE"
 else
   echo "FAIL aucun token renvoye par l'inscription"

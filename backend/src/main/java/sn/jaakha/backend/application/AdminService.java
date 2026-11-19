@@ -152,7 +152,8 @@ public class AdminService {
         addMissing(missingFields, user.fullName(), "nom complet");
         addMissing(missingFields, user.phone(), "telephone");
         addMissing(missingFields, user.photoUrl(), "photo du profil");
-        addMissing(missingFields, user.identityPhotoUrl(), "photo de la piece d'identite");
+        addMissing(missingFields, user.identityPhotoUrl(), "recto de la piece d'identite");
+        addMissing(missingFields, user.identityPhotoBackUrl(), "verso de la piece d'identite");
         addMissing(missingFields, user.zone(), "zone");
 
         if ("PRESTATAIRE".equals(user.role())) {

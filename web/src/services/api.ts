@@ -17,6 +17,8 @@ import type {
   ContactMessage,
   ContactMessagePayload,
   ForgotPasswordPayload,
+  IdentityPhotosPayload,
+  IdentityPhotosResponse,
   LoginPayload,
   MessageResponse,
   Notification,
@@ -150,10 +152,16 @@ export const accountApi = {
     const { data } = await api.post<PhotoUploadResponse>('/account/me/photo', formData)
     return data
   },
-  async uploadIdentityPhoto(file: File) {
+  // Recto et/ou verso de la piece d'identite en une seule requete.
+  async uploadIdentityPhotos(files: IdentityPhotosPayload) {
     const formData = new FormData()
-    formData.append('file', file)
-    const { data } = await api.post<PhotoUploadResponse>('/account/me/identity-photo', formData)
+    if (files.front) {
+      formData.append('front', files.front)
+    }
+    if (files.back) {
+      formData.append('back', files.back)
+    }
+    const { data } = await api.post<IdentityPhotosResponse>('/account/me/identity-photos', formData)
     return data
   },
 }

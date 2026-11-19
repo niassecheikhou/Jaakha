@@ -11,6 +11,7 @@ export type User = {
   archived: boolean
   photoUrl: string | null
   identityPhotoUrl: string | null
+  identityPhotoBackUrl: string | null
   bio: string | null
   zone: string | null
   monthlyRate: number | null

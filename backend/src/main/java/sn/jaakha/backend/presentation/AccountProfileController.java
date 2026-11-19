@@ -2,6 +2,8 @@ package sn.jaakha.backend.presentation;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.EnumMap;
+import java.util.Map;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
@@ -22,7 +24,9 @@ import sn.jaakha.backend.application.ProviderService;
 import sn.jaakha.backend.application.dto.AccountProfileRequest;
 import sn.jaakha.backend.application.dto.AccountProfileResponse;
 import sn.jaakha.backend.application.dto.AuthenticatedUser;
+import sn.jaakha.backend.application.dto.IdentityPhotosResponse;
 import sn.jaakha.backend.application.dto.PhotoUploadResponse;
+import sn.jaakha.backend.domain.enums.IdentityDocumentSide;
 import sn.jaakha.backend.infrastructure.storage.StorageService;
 
 @RestController
@@ -74,21 +78,45 @@ public class AccountProfileController {
         return new PhotoUploadResponse(profile.photoUrl());
     }
 
-    @PostMapping(value = "/identity-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public PhotoUploadResponse uploadIdentityPhoto(
+    /**
+     * Depot du recto et/ou du verso de la piece d'identite : les deux faces en une fois,
+     * ou une seule face (l'autre est conservee). Les deux fichiers sont valides avant toute ecriture.
+     */
+    @PostMapping(value = "/identity-photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public IdentityPhotosResponse uploadIdentityPhotos(
             HttpServletRequest request,
-            @RequestParam("file") MultipartFile file
+            @RequestParam(value = "front", required = false) MultipartFile front,
+            @RequestParam(value = "back", required = false) MultipartFile back
     ) {
         AuthenticatedUser user = currentUserService.requireUser(request);
-        String filename = storageService.storeIdentityPhoto(file);
-        AccountProfileResponse profile = accountProfileService.updateIdentityPhoto(user.id().toString(), filename);
-        return new PhotoUploadResponse(profile.identityPhotoUrl());
+        Map<IdentityDocumentSide, MultipartFile> files = new EnumMap<>(IdentityDocumentSide.class);
+        if (front != null) {
+            files.put(IdentityDocumentSide.FRONT, front);
+        }
+        if (back != null) {
+            files.put(IdentityDocumentSide.BACK, back);
+        }
+        if (files.isEmpty()) {
+            throw new IllegalArgumentException("Ajoute le recto et/ou le verso de la piece d'identite.");
+        }
+        files.values().forEach(storageService::validateImage);
+
+        Map<IdentityDocumentSide, String> storedFilenames = new EnumMap<>(IdentityDocumentSide.class);
+        files.forEach((side, file) -> storedFilenames.put(side, storageService.storeIdentityPhoto(file)));
+        AccountProfileResponse profile = accountProfileService.updateIdentityPhotos(user.id().toString(), storedFilenames);
+        return new IdentityPhotosResponse(profile.identityPhotoUrl(), profile.identityPhotoBackUrl());
     }
 
     @GetMapping("/identity-photo")
     public ResponseEntity<Resource> identityPhoto(HttpServletRequest request) {
         AuthenticatedUser user = currentUserService.requireUser(request);
-        return privateImage(accountProfileService.identityPhoto(user.id().toString()));
+        return privateImage(accountProfileService.identityPhoto(user.id().toString(), IdentityDocumentSide.FRONT));
+    }
+
+    @GetMapping("/identity-photo/back")
+    public ResponseEntity<Resource> identityPhotoBack(HttpServletRequest request) {
+        AuthenticatedUser user = currentUserService.requireUser(request);
+        return privateImage(accountProfileService.identityPhoto(user.id().toString(), IdentityDocumentSide.BACK));
     }
 
     static ResponseEntity<Resource> privateImage(StorageService.StoredFile file) {

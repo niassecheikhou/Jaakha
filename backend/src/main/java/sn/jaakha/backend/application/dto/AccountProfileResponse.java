@@ -11,6 +11,7 @@ public record AccountProfileResponse(
         String userId,
         String photoUrl,
         String identityPhotoUrl,
+        String identityPhotoBackUrl,
         String bio,
         String zone,
         BigDecimal monthlyRate,
@@ -20,6 +21,7 @@ public record AccountProfileResponse(
         String guardianPhone
 ) {
     public static final String OWNER_IDENTITY_PHOTO_URL = "/api/account/me/identity-photo";
+    public static final String OWNER_IDENTITY_PHOTO_BACK_URL = "/api/account/me/identity-photo/back";
 
     public static AccountProfileResponse from(AccountProfile profile) {
         return new AccountProfileResponse(
@@ -27,6 +29,7 @@ public record AccountProfileResponse(
                 profile.getOwnerKey(),
                 profile.getPhotoUrl(),
                 profile.getIdentityPhotoUrl() == null ? null : OWNER_IDENTITY_PHOTO_URL,
+                profile.getIdentityPhotoBackUrl() == null ? null : OWNER_IDENTITY_PHOTO_BACK_URL,
                 profile.getBio(),
                 profile.getZone(),
                 profile.getMonthlyRate(),

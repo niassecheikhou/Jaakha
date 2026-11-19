@@ -1,5 +1,7 @@
 package sn.jaakha.backend.domain.model;
 
+import sn.jaakha.backend.domain.enums.IdentityDocumentSide;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -25,8 +27,13 @@ public class AccountProfile {
     @Column(length = 1000)
     private String photoUrl;
 
+    /** Recto de la piece d'identite (nom du fichier dans le stockage prive). */
     @Column(length = 1000)
     private String identityPhotoUrl;
+
+    /** Verso de la piece d'identite (nom du fichier dans le stockage prive). */
+    @Column(length = 1000)
+    private String identityPhotoBackUrl;
 
     @Column(length = 1200)
     private String bio;
@@ -94,6 +101,26 @@ public class AccountProfile {
 
     public void setIdentityPhotoUrl(String identityPhotoUrl) {
         this.identityPhotoUrl = identityPhotoUrl;
+    }
+
+    public String getIdentityPhotoBackUrl() {
+        return identityPhotoBackUrl;
+    }
+
+    public void setIdentityPhotoBackUrl(String identityPhotoBackUrl) {
+        this.identityPhotoBackUrl = identityPhotoBackUrl;
+    }
+
+    public String getIdentityPhoto(IdentityDocumentSide side) {
+        return side == IdentityDocumentSide.FRONT ? identityPhotoUrl : identityPhotoBackUrl;
+    }
+
+    public void setIdentityPhoto(IdentityDocumentSide side, String storedFilename) {
+        if (side == IdentityDocumentSide.FRONT) {
+            identityPhotoUrl = storedFilename;
+        } else {
+            identityPhotoBackUrl = storedFilename;
+        }
     }
 
     public String getBio() {

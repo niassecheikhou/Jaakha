@@ -1052,6 +1052,112 @@ textarea:focus {
   color: var(--danger);
 }
 
+/* Piece d'identite : recto + verso */
+.identity-upload {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.identity-upload-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.identity-status {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fdecea;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.identity-status.complete {
+  background: #e6f4ea;
+  color: #1e7a3c;
+}
+
+.identity-sides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.identity-side {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+.identity-side figcaption {
+  font-weight: 800;
+  color: var(--primary-dark);
+}
+
+.identity-preview {
+  width: 100%;
+  aspect-ratio: 85.6 / 54;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  object-fit: contain;
+}
+
+.identity-placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--muted, #6b7280);
+  font-weight: 800;
+  border-style: dashed;
+}
+
+.identity-file-button,
+.identity-pair-button {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.identity-file-button input[type="file"],
+.identity-pair-button input[type="file"] {
+  min-width: 0;
+  padding: 8px;
+  font-size: 13px;
+}
+
+.identity-filename {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.identity-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.identity-upload > .muted,
+.identity-upload > .field-error {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 560px) {
+  .identity-sides {
+    grid-template-columns: 1fr;
+  }
+}
+
 .chips,
 .availability-list {
   display: flex;
@@ -1682,7 +1788,8 @@ textarea:focus {
 
 .user-detail-media {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Photo du profil, CNI recto, CNI verso */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 14px;
 }
 

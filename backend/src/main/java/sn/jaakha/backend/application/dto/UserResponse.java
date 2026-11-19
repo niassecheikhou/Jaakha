@@ -15,6 +15,7 @@ public record UserResponse(
         boolean archived,
         String photoUrl,
         String identityPhotoUrl,
+        String identityPhotoBackUrl,
         String bio,
         String zone,
         BigDecimal monthlyRate,

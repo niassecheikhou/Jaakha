@@ -238,6 +238,7 @@ public class AuthService {
                 null,
                 null,
                 null,
+                null,
                 0,
                 List.of(),
                 null,
