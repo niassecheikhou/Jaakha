@@ -6,11 +6,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import sn.jaakha.backend.domain.enums.ProviderStatus;
+import sn.jaakha.backend.domain.model.ProviderProfile;
 
-import sn.jaakha.backend.domain.model.ProviderAvailability;
+public record ProviderProfileResponse(
         UUID id,
+        String userId,
         String fullName,
-        BigDecimal hourlyRate,
+        String photoUrl,
+        String bio,
+        String zone,
         BigDecimal monthlyRate,
         int experienceYears,
         Set<String> skills,
@@ -29,11 +33,11 @@ import sn.jaakha.backend.domain.model.ProviderAvailability;
                 profile.getZone(),
                 profile.getHourlyRate(),
                 profile.getExperienceYears(),
-
-                profile.getSkills(),
+                new LinkedHashSet<>(profile.getSkills()),
                 profile.getStatus(),
                 profile.getAverageRating(),
                 profile.getReviewCount(),
-                availability.stream().map(AvailabilityResponse::from).toList()
-                new LinkedHashSet<>(profile.getSkills()),
+                List.of()
+        );
+    }
 }

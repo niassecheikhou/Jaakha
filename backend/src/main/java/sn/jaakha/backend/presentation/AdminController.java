@@ -16,14 +16,14 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import sn.jaakha.backend.application.AccountProfileService;
 import sn.jaakha.backend.application.AdminService;
-
-import sn.jaakha.backend.application.BookingService;
-import sn.jaakha.backend.application.ProviderService;
-import sn.jaakha.backend.application.ReportService;
-import sn.jaakha.backend.application.UserAccess;
+import sn.jaakha.backend.application.CurrentUserService;
+import sn.jaakha.backend.application.dto.AccountArchiveRequest;
+import sn.jaakha.backend.application.dto.AccountStatusUpdateRequest;
 import sn.jaakha.backend.application.dto.AdminCreateUserRequest;
 import sn.jaakha.backend.application.dto.BookingResponse;
-import sn.jaakha.backend.application.dto.BookingStatusRequest;
+import sn.jaakha.backend.application.dto.ProviderProfileResponse;
+import sn.jaakha.backend.application.dto.StatusUpdateRequest;
+import sn.jaakha.backend.application.dto.UserResponse;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -64,7 +64,7 @@ public class AdminController {
     }
 
     @PatchMapping("/users/{id}/active")
-
+    public UserResponse updateUserActive(
             HttpServletRequest httpRequest,
             @PathVariable UUID id,
             @Valid @RequestBody AccountStatusUpdateRequest request
@@ -113,5 +113,5 @@ public class AdminController {
     ) {
         currentUserService.requireAdmin(httpRequest);
         return adminService.updateBookingStatus(id, request.status());
-
+    }
 }

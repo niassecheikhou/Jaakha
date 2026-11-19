@@ -8,8 +8,6 @@ public record ReviewResponse(
         String comment,
         UUID employerId,
         String employerName,
-
+        String createdAt
 ) {
-    public static ReviewResponse from(Review review) {
-        return new ReviewResponse(
-                review.getId(),
+}

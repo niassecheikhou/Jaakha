@@ -16,15 +16,6 @@ public record BookingResponse(
         String employerName,
         UUID providerId,
         String providerName,
-
+        String createdAt
 ) {
-    public static BookingResponse from(Booking booking) {
-        return new BookingResponse(
-                booking.getId(),
-                booking.getStatus(),
-                booking.getServiceDate(),
-                booking.getStartTime(),
-                booking.getDurationHours(),
-                booking.getAddress(),
-                booking.getInstructions(),
-                booking.getEmployer().getId(),
+}

@@ -10,12 +10,6 @@ public record NotificationResponse(
         UUID bookingId,
         UUID userId,
         boolean read,
+        String createdAt
 ) {
-    public static NotificationResponse from(Notification notification) {
-        return new NotificationResponse(
-                notification.getId(),
-                notification.getType(),
-                notification.getTitle(),
-                notification.getMessage(),
-                notification.getBookingId(),
-                notification.getUserId(),
+}

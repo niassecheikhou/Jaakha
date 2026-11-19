@@ -21,21 +21,21 @@ import sn.jaakha.backend.application.dto.StatusUpdateRequest;
 @RequestMapping("/api/bookings")
 public class BookingController {
     private final BookingService bookingService;
+    private final CurrentUserService currentUserService;
 
-    private final UserAccess userAccess;
-
-    public BookingController(BookingService bookingService, UserAccess userAccess) {
+    public BookingController(BookingService bookingService, CurrentUserService currentUserService) {
         this.bookingService = bookingService;
-        this.userAccess = userAccess;
+        this.currentUserService = currentUserService;
     }
 
     @PostMapping
-    public BookingResponse create(@AuthenticationPrincipal JaakhaUserPrincipal principal,
-            @Valid @RequestBody BookingRequest request) {
-        return bookingService.create(userAccess.requireUser(principal), request);
+    public BookingResponse create(
+            HttpServletRequest request,
+            @Valid @RequestBody BookingCreateRequest payload
+    ) {
+        return bookingService.create(currentUserService.requireUser(request), payload);
     }
 
-    @GetMapping("/me")
     @GetMapping("/me")
     public List<BookingResponse> mine(HttpServletRequest request) {
         return bookingService.mine(currentUserService.requireUser(request));
@@ -48,6 +48,5 @@ public class BookingController {
             @Valid @RequestBody StatusUpdateRequest payload
     ) {
         return bookingService.updateStatus(currentUserService.requireUser(request), id, payload.status());
-
     }
 }

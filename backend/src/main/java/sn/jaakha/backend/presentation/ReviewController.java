@@ -15,19 +15,18 @@ import sn.jaakha.backend.application.dto.ReviewResponse;
 @RequestMapping("/api/reviews")
 public class ReviewController {
     private final ReviewService reviewService;
+    private final CurrentUserService currentUserService;
 
-    private final UserAccess userAccess;
-
-    public ReviewController(ReviewService reviewService, UserAccess userAccess) {
+    public ReviewController(ReviewService reviewService, CurrentUserService currentUserService) {
         this.reviewService = reviewService;
-        this.userAccess = userAccess;
+        this.currentUserService = currentUserService;
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ReviewResponse create(@AuthenticationPrincipal JaakhaUserPrincipal principal,
-            @Valid @RequestBody ReviewRequest request) {
-        return reviewService.create(userAccess.requireUser(principal), request);
-
-    private final CurrentUserService currentUserService;
-
+    public ReviewResponse create(
+            HttpServletRequest request,
+            @Valid @RequestBody ReviewCreateRequest payload
+    ) {
+        return reviewService.create(currentUserService.requireUser(request), payload);
+    }
+}

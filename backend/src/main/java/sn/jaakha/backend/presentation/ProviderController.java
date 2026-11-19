@@ -14,21 +14,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import sn.jaakha.backend.application.CurrentUserService;
 import sn.jaakha.backend.application.ProviderService;
 import sn.jaakha.backend.application.ReviewService;
-
-import sn.jaakha.backend.application.UserAccess;
-
 import sn.jaakha.backend.application.dto.AuthenticatedUser;
 import sn.jaakha.backend.application.dto.PhotoUploadResponse;
 import sn.jaakha.backend.application.dto.ProviderProfileRequest;
 import sn.jaakha.backend.application.dto.ProviderProfileResponse;
 import sn.jaakha.backend.application.dto.ReviewResponse;
-import sn.jaakha.backend.infrastructure.security.JaakhaUserPrincipal;
-
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import sn.jaakha.backend.infrastructure.storage.StorageService;
 
 @RestController
 @RequestMapping("/api/providers")
@@ -95,3 +91,10 @@ public class ProviderController {
         providerService.getById(id);
         return reviewService.findByProvider(id);
     }
+
+    private String absoluteUrl(String relativeUrl) {
+        return ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path(relativeUrl)
+                .toUriString();
+    }
+}
