@@ -693,6 +693,123 @@ textarea:focus {
   opacity: 0.45;
 }
 
+/* Menu d'actions "⋮" (components/ActionsMenu.tsx) */
+.actions-menu-trigger svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+.actions-menu-trigger.open {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+  color: var(--white);
+}
+
+.actions-menu {
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+  animation: actions-menu-in 120ms ease-out;
+}
+
+.actions-menu.open-up {
+  animation-name: actions-menu-in-up;
+}
+
+.actions-menu-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 10px;
+  color: var(--primary-dark);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.actions-menu-item:hover:not(:disabled),
+.actions-menu-item:focus-visible {
+  background: var(--surface-muted);
+  outline: none;
+}
+
+.actions-menu-item:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.actions-menu-icon {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  place-items: center;
+  border-radius: 6px;
+}
+
+.actions-menu-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.actions-menu-item.tone-view .actions-menu-icon {
+  color: var(--primary-dark);
+  background: #eef7f9;
+}
+
+.actions-menu-item.tone-approve {
+  color: #07543f;
+}
+
+.actions-menu-item.tone-approve .actions-menu-icon {
+  background: #effaf5;
+}
+
+.actions-menu-item.tone-reject {
+  color: #8a1f16;
+}
+
+.actions-menu-item.tone-reject .actions-menu-icon {
+  background: #fff2f0;
+}
+
+.actions-menu-item.tone-archive .actions-menu-icon {
+  color: #344054;
+  background: #f1f4f8;
+}
+
+@keyframes actions-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes actions-menu-in-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actions-menu {
+    animation: none;
+  }
+}
+
 .link-button {
   width: fit-content;
   padding: 0;
@@ -1316,7 +1433,7 @@ textarea:focus {
 }
 
 .admin-provider-row {
-  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
 .admin-user-row p,
@@ -1571,8 +1688,7 @@ textarea:focus {
   border-bottom: 0;
 }
 
-.admin-user-cell,
-.table-actions {
+.admin-user-cell {
   display: flex;
   gap: 8px;
   align-items: center;
@@ -1580,19 +1696,11 @@ textarea:focus {
   min-width: 0;
 }
 
-.table-actions {
-  gap: 5px;
-  width: 100%;
-}
-
-.table-actions .icon-button {
-  width: 28px;
-  height: 28px;
-}
-
-.table-actions .icon-button svg {
-  width: 14px;
-  height: 14px;
+/* Colonne "Actions" : un seul bouton de menu, aligne a droite. */
+.admin-table .actions-column {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .admin-user-avatar {
@@ -4157,6 +4265,15 @@ textarea:focus {
 
   .span-2 {
     grid-column: auto;
+  }
+
+  /* Profil prestataire : infos sur toute la largeur, puis statut et menu "⋮" cote a cote. */
+  .admin-provider-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .admin-provider-row > :first-child {
+    grid-column: 1 / -1;
   }
 
   .photo-upload {

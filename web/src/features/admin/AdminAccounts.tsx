@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { ActionsMenu, type ActionsMenuItem } from '../../components/ActionsMenu'
 import { ProtectedImage } from '../../components/ProtectedImage'
 import type { User } from '../../types/api'
 import { formatPrice } from '../../utils/format'
@@ -101,6 +102,28 @@ export function UserDetailPanel({
   )
 }
 
+// Actions applicables au compte selon son etat (archive, valide ou en attente).
+function accountActions(
+  user: User,
+  loading: boolean,
+  onInspect: (user: User) => void,
+  onToggle: (user: User, active: boolean) => void,
+  onArchive: (user: User, archived: boolean) => void,
+): ActionsMenuItem[] {
+  const items: ActionsMenuItem[] = [
+    { id: 'view', label: 'Voir le detail', icon: <EyeIcon />, tone: 'view', onSelect: () => onInspect(user) },
+  ]
+  if (!user.archived) {
+    items.push(user.active
+      ? { id: 'invalidate', label: 'Invalider le compte', icon: <XIcon />, tone: 'reject', disabled: loading, onSelect: () => onToggle(user, false) }
+      : { id: 'validate', label: 'Valider le compte', icon: <CheckIcon />, tone: 'approve', disabled: loading, onSelect: () => onToggle(user, true) })
+  }
+  items.push(user.archived
+    ? { id: 'restore', label: 'Restaurer le compte', icon: <RestoreIcon />, tone: 'archive', disabled: loading, onSelect: () => onArchive(user, false) }
+    : { id: 'archive', label: 'Archiver le compte', icon: <ArchiveIcon />, tone: 'archive', disabled: loading, onSelect: () => onArchive(user, true) })
+  return items
+}
+
 export function AccountsTable({
   users,
   loading,
@@ -124,7 +147,7 @@ export function AccountsTable({
             <th>Email</th>
             <th>Telephone</th>
             <th>Statut</th>
-            <th>Actions</th>
+            <th className="actions-column">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -143,51 +166,11 @@ export function AccountsTable({
               <td>{user.email || 'Non renseigne'}</td>
               <td>{user.phone || 'Non renseigne'}</td>
               <td><AccountLifecycleBadge user={user} /></td>
-              <td>
+              <td className="actions-column">
                 {user.role === 'ADMIN' ? (
                   <span className="muted">Protege</span>
                 ) : (
-                  <div className="table-actions">
-                    <button
-                      aria-label={`Voir le detail de ${user.fullName}`}
-                      className="icon-button view"
-                      title="Voir le detail"
-                      type="button"
-                      onClick={() => onInspect(user)}
-                    >
-                      <EyeIcon />
-                    </button>
-                    <button
-                      aria-label={`Valider le compte de ${user.fullName}`}
-                      className="icon-button approve"
-                      disabled={loading || user.active || user.archived}
-                      title="Valider"
-                      type="button"
-                      onClick={() => onToggle(user, true)}
-                    >
-                      <CheckIcon />
-                    </button>
-                    <button
-                      aria-label={`Invalider le compte de ${user.fullName}`}
-                      className="icon-button reject"
-                      disabled={loading || !user.active || user.archived}
-                      title="Invalider"
-                      type="button"
-                      onClick={() => onToggle(user, false)}
-                    >
-                      <XIcon />
-                    </button>
-                    <button
-                      aria-label={`${user.archived ? 'Restaurer' : 'Archiver'} le compte de ${user.fullName}`}
-                      className="icon-button archive"
-                      disabled={loading}
-                      title={user.archived ? 'Restaurer' : 'Archiver'}
-                      type="button"
-                      onClick={() => onArchive(user, !user.archived)}
-                    >
-                      {user.archived ? <RestoreIcon /> : <ArchiveIcon />}
-                    </button>
-                  </div>
+                  <ActionsMenu subject={user.fullName} items={accountActions(user, loading, onInspect, onToggle, onArchive)} />
                 )}
               </td>
             </tr>

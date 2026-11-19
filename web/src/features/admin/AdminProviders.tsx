@@ -1,7 +1,26 @@
 import { StatusBadge } from '../../components/StatusBadge'
 import type { ProviderProfile, ProviderStatus } from '../../types/api'
 import { formatPrice } from '../../utils/format'
+import { ActionsMenu, type ActionsMenuItem } from '../../components/ActionsMenu'
 import { CheckIcon, EyeIcon, XIcon } from './AdminIcons'
+
+// Actions du profil public : on ne propose pas de revalider un profil deja valide (ni l'inverse).
+function providerActions(
+  provider: ProviderProfile,
+  onInspect: (provider: ProviderProfile) => void,
+  onStatusChange: (provider: ProviderProfile, status: ProviderStatus) => void,
+): ActionsMenuItem[] {
+  const items: ActionsMenuItem[] = [
+    { id: 'view', label: "Voir le dossier (piece d'identite)", icon: <EyeIcon />, tone: 'view', onSelect: () => onInspect(provider) },
+  ]
+  if (provider.status !== 'APPROVED') {
+    items.push({ id: 'approve', label: 'Valider le profil', icon: <CheckIcon />, tone: 'approve', onSelect: () => onStatusChange(provider, 'APPROVED') })
+  }
+  if (provider.status !== 'REJECTED') {
+    items.push({ id: 'reject', label: 'Rejeter le profil', icon: <XIcon />, tone: 'reject', onSelect: () => onStatusChange(provider, 'REJECTED') })
+  }
+  return items
+}
 
 export function ProviderProfilesReview({
   providers,
@@ -30,33 +49,7 @@ export function ProviderProfilesReview({
               </div>
             </div>
             <StatusBadge status={provider.status} />
-            <button
-              aria-label={`Voir le dossier et la piece d'identite de ${provider.fullName}`}
-              className="icon-button view"
-              title="Voir le dossier (piece d'identite)"
-              type="button"
-              onClick={() => onInspect(provider)}
-            >
-              <EyeIcon />
-            </button>
-            <button
-              aria-label={`Valider le profil de ${provider.fullName}`}
-              className="icon-button approve"
-              title="Valider"
-              type="button"
-              onClick={() => onStatusChange(provider, 'APPROVED')}
-            >
-              <CheckIcon />
-            </button>
-            <button
-              aria-label={`Rejeter le profil de ${provider.fullName}`}
-              className="icon-button reject"
-              title="Rejeter"
-              type="button"
-              onClick={() => onStatusChange(provider, 'REJECTED')}
-            >
-              <XIcon />
-            </button>
+            <ActionsMenu subject={provider.fullName} items={providerActions(provider, onInspect, onStatusChange)} />
           </article>
         ))}
       </div>
