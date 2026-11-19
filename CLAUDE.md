@@ -12,7 +12,8 @@ Projet de soutenance de Licence en Génie Logiciel.
 - `mobile/` : application React Native avec Expo (TypeScript, Expo Router dans `mobile/app/`).
   Encore au stade du template Expo. Ce dossier est un dépôt git séparé, avec son propre
   `mobile/CLAUDE.md` et `mobile/AGENTS.md` : les lire avant de toucher au mobile.
-- `.github/workflows/` : CI existante (`backend-ci`, `web-ci`, `mobile-ci`, `deploy` manuel)
+- `.github/workflows/` : `ci.yml` (backend, web, stack Docker + tests de fumee, job `CI OK` obligatoire
+  pour fusionner sur main) et `deploy.yml` (CI puis images GHCR puis deploy hooks staging/production)
 - `data/`, `backend/data/` : données locales (ne pas modifier sans demande)
 - `docker-compose.yml` : orchestration des services (à la racine)
 - `docs/memoire/` : mémoire de soutenance (créé par l'agent redacteur-memoire)
@@ -23,7 +24,8 @@ Projet de soutenance de Licence en Génie Logiciel.
 - Backend : `cd backend; .\mvnw.cmd spring-boot:run` — tests : `.\mvnw.cmd test`
 - Web : `cd web; npm install; npm run dev` — build : `npm run build` — lint : `npm run lint`
 - Mobile : `cd mobile; npm install; npx expo start` — lint : `npm run lint`
-- Tout le projet : `docker compose up --build` (depuis la racine)
+- Tout le projet : `docker compose up --build` (depuis la racine) ; web sur http://localhost:8081
+  - tests de fumee : `bash .github/scripts/smoke-test.sh http://localhost:8081 http://localhost:8080`
 
 ## Conventions
 - Code et noms de variables en anglais, commentaires et docs en français

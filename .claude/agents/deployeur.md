@@ -9,9 +9,11 @@ Tu es l'ingénieur DevOps du projet JAANKHA.
 Responsabilités :
 - Un `docker-compose.yml` existe déjà à la racine (Postgres + backend, avec volumes persistants pour la base,
   `uploads/` et `private-uploads/`) : lis-le et améliore-le plutôt que de le réécrire.
-  `backend/Dockerfile` existe (multi-stage Maven) ; il n'y a pas encore de Dockerfile pour `web/` (build Vite servi par Nginx).
-- La CI existe déjà dans `.github/workflows/` : `backend-ci.yml`, `web-ci.yml`, `mobile-ci.yml` et `deploy.yml`
-  (manuel, étape de déploiement encore à compléter). Améliore ces fichiers au lieu d'en créer un nouveau.
+  `backend/Dockerfile` (multi-stage Maven, non-root, healthcheck) et `web/Dockerfile` (Vite + Nginx non-root,
+  proxy `/api` et `/uploads` via `web/nginx.conf.template`) existent.
+- La CI existe dans `.github/workflows/` : `ci.yml` (job `CI OK` = contrôle obligatoire pour fusionner sur main)
+  et `deploy.yml` (CI, images GHCR, deploy hooks par environnement). Améliore ces fichiers au lieu d'en créer un nouveau.
+  Les tests de fumée sont dans `.github/scripts/smoke-test.sh`.
 - Préparer le déploiement vers l'hébergeur choisi (ex. Render, Railway ou un VPS pour le backend ;
   Vercel ou Netlify pour le frontend). Demande quel hébergeur utiliser s'il n'est pas précisé.
 - Les fichiers déposés (photos, pièces d'identité) doivent être sur un stockage persistant en production ;

@@ -20,7 +20,7 @@ Le MVP couvre les parcours essentiels sur 90 jours :
 backend/   API Spring Boot, JPA, Flyway, Security, Mail
 web/       Application React/Vite
 mobile/    Application Expo
-.github/   CI backend, web, mobile et workflow deploy manuel
+.github/   pipeline CI (ci.yml), livraison (deploy.yml) et tests de fumee
 ```
 
 Le backend suit la structure deja initiee :
@@ -125,11 +125,35 @@ Routes admin :
 
 ## CI/CD
 
-GitHub Actions contient :
+### Integration continue : `.github/workflows/ci.yml`
 
-- `backend-ci.yml` : tests Maven Java 21
-- `web-ci.yml` : `npm ci`, lint et build Vite
-- `mobile-ci.yml` : `npm ci` et lint Expo
-- `deploy.yml` : workflow manuel qui package backend/web et construit l'image Docker backend
+Lancee sur **chaque pull request** (sans filtre de chemins) :
 
-Le workflow `deploy.yml` est volontairement cible-neutre pour l'instant. Il faut ajouter les etapes propres a l'hebergeur choisi lorsque la destination staging/production sera connue.
+| Job | Contenu |
+|-----|---------|
+| `Backend (tests Maven)` | `./mvnw verify` : compilation, tests JUnit/Mockito (H2 en memoire), packaging |
+| `Web (lint, build, audit)` | `npm ci`, ESLint, build TypeScript strict + Vite, `npm audit` (niveau high) |
+| `Docker (stack complete + tests de fumee)` | `docker compose up --wait` puis `.github/scripts/smoke-test.sh` : Nginx, SPA, API via proxy, inscription en base, 401/403, dossier prive non expose |
+| `CI OK` | Vert seulement si les trois jobs precedents sont verts |
+
+**Regle de fusion :** `CI OK` est le controle obligatoire de la protection de la branche `main`.
+Une PR ne peut etre fusionnee que si tout le pipeline est vert.
+
+Le mobile (`mobile/`) est un depot git separe : sa CI doit vivre dans son propre depot.
+
+### Livraison continue : `.github/workflows/deploy.yml`
+
+- **Fusion sur `main`** : relance `ci.yml` sur le commit fusionne, publie les images
+  `ghcr.io/<owner>/jaakha-backend` et `ghcr.io/<owner>/jaakha-web` (tags `<sha>` et `staging`),
+  puis appelle les deploy hooks de l'environnement `staging`.
+- **Production** : Actions > Deploy > Run workflow > `production` (validation manuelle possible
+  via les regles de l'environnement GitHub `production`).
+- Secrets par environnement : `BACKEND_DEPLOY_HOOK_URL`, `WEB_DEPLOY_HOOK_URL` (URL de deploy hook
+  Render/Railway). Sans hook configure, les images sont publiees et un avertissement est affiche.
+
+### Tester la stack complete en local
+
+```bash
+docker compose up --build -d --wait
+bash .github/scripts/smoke-test.sh http://localhost:8081 http://localhost:8080
+```
