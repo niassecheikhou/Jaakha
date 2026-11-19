@@ -1833,6 +1833,12 @@ textarea:focus {
     overflow-x: auto;
   }
 
+  /* Petit ecran : les tableaux de reservations defilent horizontalement dans leur cadre. */
+  .booking-table,
+  .employer-bookings-table {
+    min-width: 760px;
+  }
+
   .admin-table {
     min-width: 760px;
   }
@@ -2316,7 +2322,9 @@ textarea:focus {
 
 .booking-table {
   width: 100%;
-  min-width: 980px;
+  /* Pas de largeur minimale sur ordinateur : le tableau tient dans la zone de contenu
+     (le defilement horizontal n'est active que sur petit ecran, voir @media max-width: 860px). */
+  min-width: 0;
   border-collapse: collapse;
 }
 
@@ -2342,7 +2350,9 @@ textarea:focus {
   line-height: 1.4;
 }
 
-.booking-table td:first-child {
+.booking-table td:first-child,
+.booking-table td:nth-child(3),
+.booking-table td:nth-child(6) {
   white-space: nowrap;
 }
 
@@ -2421,7 +2431,8 @@ textarea:focus {
 
 .employer-bookings-table {
   width: 100%;
-  min-width: 780px;
+  /* Defilement horizontal uniquement sur petit ecran (voir @media max-width: 860px). */
+  min-width: 0;
   border-collapse: collapse;
 }
 
