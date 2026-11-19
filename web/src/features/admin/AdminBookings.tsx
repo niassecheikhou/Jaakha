@@ -7,47 +7,56 @@ import { ActivityIcon, CheckIcon, FlagIcon, PlayIcon, XIcon } from './AdminIcons
 import { bookingReference } from './admin-booking-utils'
 import { displayRole } from './admin-utils'
 
-// Actions possibles selon le statut, alignees sur le cycle impose par le backend (BookingStatusPolicy) :
-// REQUESTED -> ACCEPTED -> IN_PROGRESS -> DONE, annulation possible tant que la mission n'est pas terminee.
-// DONE et CANCELLED sont definitifs : aucune action.
+// Cycle de vie impose par le backend (BookingStatusPolicy) : REQUESTED -> ACCEPTED -> IN_PROGRESS -> DONE,
+// annulation possible tant que la mission n'est pas terminee. DONE et CANCELLED sont definitifs.
+const bookingSteps: { target: BookingStatus; label: string; statusLabel: string; waitingFor: string; icon: ReactNode }[] = [
+  { target: 'ACCEPTED', label: 'Accepter la reservation', statusLabel: 'Acceptee', waitingFor: 'Etape 1', icon: <CheckIcon /> },
+  { target: 'IN_PROGRESS', label: 'Demarrer la mission', statusLabel: 'En cours', waitingFor: 'Apres acceptation', icon: <PlayIcon /> },
+  { target: 'DONE', label: 'Terminer la mission', statusLabel: 'Terminee', waitingFor: 'Apres le demarrage', icon: <FlagIcon /> },
+]
+const stepOrder: BookingStatus[] = ['REQUESTED', 'ACCEPTED', 'IN_PROGRESS', 'DONE']
+
+// Menu d'une reservation : toutes les etapes restantes du parcours sont visibles ;
+// seule l'etape suivante est cliquable, les suivantes sont grisees avec leur condition.
 function bookingActions(
   booking: Booking,
   loading: boolean,
   onStatusChange: (booking: Booking, status: BookingStatus) => void,
 ): ActionsMenuItem[] {
-  const change = (status: BookingStatus) => () => onStatusChange(booking, status)
-  const cancel: ActionsMenuItem = {
-    id: 'cancel',
-    label: 'Annuler la reservation',
-    icon: <XIcon />,
-    tone: 'reject',
-    disabled: loading,
-    onSelect: () => {
-      if (window.confirm(`Annuler la reservation ${bookingReference(booking.id)} ? Cette action est definitive.`)) {
-        onStatusChange(booking, 'CANCELLED')
+  const currentIndex = stepOrder.indexOf(booking.status)
+  const steps: ActionsMenuItem[] = bookingSteps
+    .filter((step) => stepOrder.indexOf(step.target) > currentIndex)
+    .map((step) => {
+      const isNext = stepOrder.indexOf(step.target) === currentIndex + 1
+      return {
+        id: step.target,
+        label: step.label,
+        icon: step.icon,
+        tone: step.target === 'IN_PROGRESS' ? 'view' : 'approve',
+        hint: isNext ? `Nouveau statut : ${step.statusLabel}` : step.waitingFor,
+        unavailable: !isNext,
+        disabled: loading,
+        onSelect: () => onStatusChange(booking, step.target),
       }
+    })
+  return [
+    ...steps,
+    {
+      id: 'cancel',
+      label: 'Annuler la reservation',
+      icon: <XIcon />,
+      tone: 'reject',
+      hint: 'Definitif',
+      disabled: loading,
+      onSelect: () => {
+        if (window.confirm(`Annuler la reservation ${bookingReference(booking.id)} ? Cette action est definitive.`)) {
+          onStatusChange(booking, 'CANCELLED')
+        }
+      },
     },
-  }
-  switch (booking.status) {
-    case 'REQUESTED':
-      return [
-        { id: 'accept', label: 'Accepter la reservation', icon: <CheckIcon />, tone: 'approve', disabled: loading, onSelect: change('ACCEPTED') },
-        cancel,
-      ]
-    case 'ACCEPTED':
-      return [
-        { id: 'start', label: 'Demarrer la mission', icon: <PlayIcon />, tone: 'view', disabled: loading, onSelect: change('IN_PROGRESS') },
-        cancel,
-      ]
-    case 'IN_PROGRESS':
-      return [
-        { id: 'done', label: 'Marquer comme terminee', icon: <FlagIcon />, tone: 'approve', disabled: loading, onSelect: change('DONE') },
-        cancel,
-      ]
-    default:
-      return []
-  }
+  ]
 }
+
 const estimatedHourlyRate = 5000
 const monthLabelFormatter = new Intl.DateTimeFormat('fr-FR', { month: 'short' })
 

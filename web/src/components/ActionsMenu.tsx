@@ -7,7 +7,12 @@ export type ActionsMenuItem = {
   icon?: ReactNode
   // Couleur de l'action : neutre par defaut.
   tone?: 'view' | 'approve' | 'reject' | 'archive'
+  // Texte secondaire sous le libelle (ex. "Statut : En cours", "Apres acceptation").
+  hint?: string
+  // Action momentanement bloquee (requete en cours).
   disabled?: boolean
+  // Etape pas encore possible : affichee grisee pour montrer le parcours, non cliquable.
+  unavailable?: boolean
   onSelect: () => void
 }
 
@@ -17,17 +22,18 @@ type ActionsMenuProps = {
   items: ActionsMenuItem[]
 }
 
-const MENU_WIDTH = 230
+const MENU_WIDTH = 270
 const ITEM_HEIGHT = 42
+const ITEM_WITH_HINT_HEIGHT = 56
 const MENU_PADDING = 12
 const VIEWPORT_MARGIN = 8
 
 type MenuPosition = { top: number; left: number; openUp: boolean }
 
 // Place le menu sous le bouton, aligne a droite ; au-dessus s'il n'y a pas la place en bas.
-function menuPosition(button: HTMLElement, itemCount: number): MenuPosition {
+function menuPosition(button: HTMLElement, items: ActionsMenuItem[]): MenuPosition {
   const rect = button.getBoundingClientRect()
-  const menuHeight = itemCount * ITEM_HEIGHT + MENU_PADDING
+  const menuHeight = items.reduce((height, item) => height + (item.hint ? ITEM_WITH_HINT_HEIGHT : ITEM_HEIGHT), MENU_PADDING)
   const openUp = rect.bottom + menuHeight + VIEWPORT_MARGIN > window.innerHeight && rect.top > menuHeight
   const left = Math.min(
     Math.max(VIEWPORT_MARGIN, rect.right - MENU_WIDTH),
@@ -91,7 +97,7 @@ export function ActionsMenu({ subject, items }: ActionsMenuProps) {
     if (open) {
       close()
     } else if (buttonRef.current) {
-      setPosition(menuPosition(buttonRef.current, items.length))
+      setPosition(menuPosition(buttonRef.current, items))
     }
   }
 
@@ -149,8 +155,9 @@ export function ActionsMenu({ subject, items }: ActionsMenuProps) {
         >
           {items.map((item) => (
             <button
-              className={`actions-menu-item${item.tone ? ` tone-${item.tone}` : ''}`}
-              disabled={item.disabled}
+              aria-disabled={item.unavailable || undefined}
+              className={`actions-menu-item${item.tone ? ` tone-${item.tone}` : ''}${item.unavailable ? ' unavailable' : ''}`}
+              disabled={item.disabled || item.unavailable}
               key={item.id}
               role="menuitem"
               type="button"
@@ -160,7 +167,10 @@ export function ActionsMenu({ subject, items }: ActionsMenuProps) {
               }}
             >
               {item.icon && <span className="actions-menu-icon">{item.icon}</span>}
-              <span>{item.label}</span>
+              <span className="actions-menu-text">
+                <span>{item.label}</span>
+                {item.hint && <small>{item.hint}</small>}
+              </span>
             </button>
           ))}
         </div>,
