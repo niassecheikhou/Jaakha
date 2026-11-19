@@ -6,12 +6,10 @@ import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -20,8 +18,6 @@ import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import sn.jaakha.backend.domain.enums.ProviderStatus;
 
 @Entity
@@ -31,10 +27,16 @@ public class ProviderProfile {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
-    private AppUser user;
+    @Column(nullable = false, unique = true)
+    private String ownerKey;
 
+    @Column(name = "user_id", nullable = false, unique = true)
+    private UUID userId;
+
+    @Column(nullable = false)
+    private String fullName;
+
+    @Column(length = 1000)
     private String photoUrl;
 
     @Column(length = 1200)
@@ -55,7 +57,6 @@ public class ProviderProfile {
     private Set<String> skills = new LinkedHashSet<>();
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 30)
     private ProviderStatus status = ProviderStatus.PENDING;
 
@@ -74,8 +75,12 @@ public class ProviderProfile {
     protected ProviderProfile() {
     }
 
-    public ProviderProfile(AppUser user) {
-        this.user = user;
+    public ProviderProfile(String ownerKey, UUID userId, String fullName) {
+        this.ownerKey = ownerKey;
+        this.userId = userId;
+        this.fullName = fullName;
+        this.zone = "Dakar";
+        this.hourlyRate = BigDecimal.ZERO;
     }
 
     @PrePersist
@@ -93,8 +98,20 @@ public class ProviderProfile {
         return id;
     }
 
-    public AppUser getUser() {
-        return user;
+    public String getOwnerKey() {
+        return ownerKey;
+    }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
     }
 
     public String getPhotoUrl() {
@@ -157,19 +174,7 @@ public class ProviderProfile {
         return averageRating;
     }
 
-    public void setAverageRating(BigDecimal averageRating) {
-        this.averageRating = averageRating;
-    }
-
     public int getReviewCount() {
         return reviewCount;
-    }
-
-    public void setReviewCount(int reviewCount) {
-        this.reviewCount = reviewCount;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
     }
 }

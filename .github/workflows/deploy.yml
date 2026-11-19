@@ -1,0 +1,51 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build backend artifact
+        working-directory: backend
+        run: ./mvnw --batch-mode -DskipTests package
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build web artifact
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build backend Docker image
+        run: docker build -t jaakha-backend:${{ github.sha }} ./backend
+
+      - name: Deployment placeholder
+        run: echo "Artifacts built for ${{ inputs.environment }}. Add host/cloud-specific deployment steps here."

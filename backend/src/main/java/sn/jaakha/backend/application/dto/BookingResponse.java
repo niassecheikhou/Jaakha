@@ -1,15 +1,12 @@
 package sn.jaakha.backend.application.dto;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
-import sn.jaakha.backend.domain.enums.BookingStatus;
-import sn.jaakha.backend.domain.model.Booking;
 
 public record BookingResponse(
         UUID id,
-        BookingStatus status,
+        String status,
         LocalDate serviceDate,
         LocalTime startTime,
         int durationHours,
@@ -19,7 +16,7 @@ public record BookingResponse(
         String employerName,
         UUID providerId,
         String providerName,
-        Instant createdAt
+
 ) {
     public static BookingResponse from(Booking booking) {
         return new BookingResponse(
@@ -31,10 +28,3 @@ public record BookingResponse(
                 booking.getAddress(),
                 booking.getInstructions(),
                 booking.getEmployer().getId(),
-                booking.getEmployer().getFullName(),
-                booking.getProvider().getId(),
-                booking.getProvider().getUser().getFullName(),
-                booking.getCreatedAt()
-        );
-    }
-}

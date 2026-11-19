@@ -1,0 +1,228 @@
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { FormError } from '../../components/FormError'
+import { useToast } from '../../components/toast-context'
+import { WorkspaceShell, type WorkspaceNavItem } from '../../components/WorkspaceShell'
+import { useAuth } from '../../hooks/use-auth'
+import { adminApi, getApiError } from '../../services/api'
+import type { AdminCreateUserPayload, BookingStatus, ProviderStatus, User } from '../../types/api'
+import { formatStatus } from '../../utils/format'
+import { AccountsTable, UserDetailPanel } from './AdminAccounts'
+import {
+  BagIcon,
+  DashboardIcon,
+  HourglassIcon,
+  MailIcon,
+  ProfilePendingIcon,
+  UsersIcon,
+} from './AdminIcons'
+import { BookingMetricCard, BookingsManagement, DashboardOverview } from './AdminBookings'
+import { AdminContactMessages } from './AdminContactMessages'
+import { ProviderProfilesReview } from './AdminProviders'
+import { CreateUserForm } from './CreateUserForm'
+import { CsvUsersImport } from './CsvUsersImport'
+import { bookingReference } from './admin-booking-utils'
+import type { AdminMenu } from './admin-types'
+import { countPendingProfileApprovals } from './admin-utils'
+
+export function AdminDashboard() {
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const [activeMenu, setActiveMenu] = useState<AdminMenu>('dashboard')
+  const [adminError, setAdminError] = useState({ message: '', fields: {} })
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: adminApi.users })
+  const providersQuery = useQuery({ queryKey: ['admin', 'providers'], queryFn: () => adminApi.providers() })
+  const bookingsQuery = useQuery({ queryKey: ['admin', 'bookings'], queryFn: () => adminApi.bookings() })
+  const contactMessagesQuery = useQuery({ queryKey: ['admin', 'contact-messages'], queryFn: adminApi.contactMessages })
+
+  const providerStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; providerName: string; status: ProviderStatus }) => adminApi.updateProviderStatus(id, status),
+    onMutate: () => setAdminError({ message: '', fields: {} }),
+    onSuccess: (_, variables) => {
+      toast.success(
+        variables.status === 'APPROVED' ? 'Profil prestataire valide' : 'Profil prestataire rejete',
+        `Le profil de ${variables.providerName} a ete ${variables.status === 'APPROVED' ? 'valide' : 'rejete'}.`,
+      )
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'providers'] })
+      void queryClient.invalidateQueries({ queryKey: ['providers'] })
+    },
+    onError: (caughtError) => {
+      const apiError = getApiError(caughtError)
+      setAdminError(apiError)
+      toast.error('Mise a jour du profil impossible', apiError.message)
+    },
+  })
+  const createUserMutation = useMutation({
+    mutationFn: (payload: AdminCreateUserPayload) => adminApi.createUser(payload),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  })
+  const userStatusMutation = useMutation({
+    mutationFn: ({ id, active }: { active: boolean; id: string; userName: string }) => adminApi.updateUserActive(id, active),
+    onMutate: () => setAdminError({ message: '', fields: {} }),
+    onSuccess: (_, variables) => {
+      toast.success(
+        variables.active ? 'Compte valide' : 'Compte invalide',
+        `Le compte de ${variables.userName} a ete ${variables.active ? 'valide' : 'invalide'}.`,
+      )
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      void queryClient.invalidateQueries({ queryKey: ['providers'] })
+    },
+    onError: (caughtError) => {
+      const apiError = getApiError(caughtError)
+      setAdminError(apiError)
+      toast.error('Mise a jour du compte impossible', apiError.message)
+    },
+  })
+  const userArchiveMutation = useMutation({
+    mutationFn: ({ id, archived }: { archived: boolean; id: string; userName: string }) => adminApi.updateUserArchived(id, archived),
+    onMutate: () => setAdminError({ message: '', fields: {} }),
+    onSuccess: (_, variables) => {
+      toast.success(
+        variables.archived ? 'Compte archive' : 'Compte restaure',
+        `Le compte de ${variables.userName} a ete ${variables.archived ? 'archive' : 'restaure'}.`,
+      )
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      void queryClient.invalidateQueries({ queryKey: ['providers'] })
+    },
+    onError: (caughtError) => {
+      const apiError = getApiError(caughtError)
+      setAdminError(apiError)
+      toast.error('Archivage du compte impossible', apiError.message)
+    },
+  })
+  const bookingStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { bookingReference: string; id: string; status: BookingStatus }) => adminApi.updateBookingStatus(id, status),
+    onSuccess: (_, variables) => {
+      toast.success('Reservation mise a jour', `${variables.bookingReference} est maintenant "${formatStatus(variables.status)}".`)
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] })
+    },
+    onError: (caughtError) => toast.error('Reservation non mise a jour', getApiError(caughtError).message),
+  })
+  const exportContactMessagesMutation = useMutation({
+    mutationFn: (format: 'csv' | 'excel') => adminApi.exportContactMessages(format).then((blob) => ({ blob, format })),
+    onSuccess: ({ blob, format }) => {
+      downloadBlob(blob, `messages-contact-jaankha.${format === 'excel' ? 'xls' : 'csv'}`)
+      toast.success('Export pret', `Le fichier ${format === 'excel' ? 'Excel' : 'CSV'} a ete telecharge.`)
+    },
+    onError: (caughtError) => toast.error('Export impossible', getApiError(caughtError).message),
+  })
+
+  const manageableUsers = usersQuery.data?.filter((currentUser) => currentUser.role === 'EMPLOYEUR' || currentUser.role === 'PRESTATAIRE') ?? []
+  const providers = providersQuery.data ?? []
+  const pendingProfileApprovals = countPendingProfileApprovals(manageableUsers, providers)
+  const bookings = bookingsQuery.data ?? []
+  const pendingBookings = bookings.filter((booking) => booking.status === 'REQUESTED')
+  const contactMessages = contactMessagesQuery.data ?? []
+  const adminItems: WorkspaceNavItem<AdminMenu>[] = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: <DashboardIcon />,
+    },
+    {
+      id: 'accounts',
+      label: 'Gestion des comptes',
+      icon: <UsersIcon />,
+      badge: manageableUsers.length.toLocaleString('fr-FR'),
+    },
+    {
+      id: 'bookings',
+      label: 'Gestion des reservations',
+      icon: <BagIcon />,
+      badge: pendingBookings.length.toLocaleString('fr-FR'),
+    },
+    {
+      id: 'contact',
+      label: 'Messages contact',
+      icon: <MailIcon />,
+      badge: contactMessages.length.toLocaleString('fr-FR'),
+    },
+  ]
+
+  return (
+    <WorkspaceShell
+      activeItem={activeMenu}
+      eyebrow="Back office"
+      items={adminItems}
+      title="Pilotage Jaankha"
+      userContact={user?.email || user?.phone || undefined}
+      userName={user?.fullName || 'Administrateur'}
+      onSelect={setActiveMenu}
+    >
+      {activeMenu === 'dashboard' && (
+        <>
+          <div className="booking-metrics-grid admin-overview-metrics">
+            <BookingMetricCard icon={<UsersIcon />} label="Utilisateurs" value={(usersQuery.data?.length ?? 0).toLocaleString('fr-FR')} />
+            <BookingMetricCard icon={<ProfilePendingIcon />} label="Profils en attente" value={pendingProfileApprovals.toLocaleString('fr-FR')} />
+            <BookingMetricCard icon={<BagIcon />} label="Reservation totale" value={bookings.length.toLocaleString('fr-FR')} />
+            <BookingMetricCard icon={<HourglassIcon />} label="Reservation en attente" value={pendingBookings.length.toLocaleString('fr-FR')} />
+          </div>
+          <DashboardOverview bookings={bookings} providers={providers} users={usersQuery.data ?? []} />
+        </>
+      )}
+      {usersQuery.isError && <p className="empty-state">Impossible de charger les utilisateurs.</p>}
+      {providersQuery.isError && <p className="empty-state">Impossible de charger les profils prestataires.</p>}
+      {contactMessagesQuery.isError && <p className="empty-state">Impossible de charger les messages contact.</p>}
+      <FormError message={adminError.message} fields={adminError.fields} />
+      {activeMenu === 'accounts' && (
+        <div className="dashboard-grid">
+          <section className="panel span-2">
+            <h2>Creer un compte</h2>
+            <CreateUserForm loading={createUserMutation.isPending} onCreate={(payload) => createUserMutation.mutateAsync(payload)} />
+            <CsvUsersImport loading={createUserMutation.isPending} onCreate={(payload) => createUserMutation.mutateAsync(payload)} />
+          </section>
+          <section className="panel span-2">
+            <h2>Gestion des comptes</h2>
+            {manageableUsers.length === 0 ? (
+              <p className="empty-state">Aucun compte employeur ou prestataire pour le moment.</p>
+            ) : (
+              <AccountsTable
+                loading={userStatusMutation.isPending || userArchiveMutation.isPending}
+                users={manageableUsers}
+                onToggle={(selectedAccount, active) => userStatusMutation.mutate({ id: selectedAccount.id, active, userName: selectedAccount.fullName })}
+                onArchive={(selectedAccount, archived) => userArchiveMutation.mutate({ id: selectedAccount.id, archived, userName: selectedAccount.fullName })}
+                onInspect={setSelectedUser}
+              />
+            )}
+            {selectedUser && <UserDetailPanel user={selectedUser} onClose={() => setSelectedUser(null)} />}
+          </section>
+          <ProviderProfilesReview
+            providers={providers}
+            onStatusChange={(provider, status) => providerStatusMutation.mutate({ id: provider.id, providerName: provider.fullName, status })}
+            onInspect={(provider) => setSelectedUser(usersQuery.data?.find((account) => account.id === provider.userId) ?? null)}
+          />
+        </div>
+      )}
+      {activeMenu === 'bookings' && (
+        <BookingsManagement
+          bookings={bookings}
+          loading={bookingStatusMutation.isPending}
+          onStatusChange={(booking, status) => bookingStatusMutation.mutate({ id: booking.id, bookingReference: bookingReference(booking.id), status })}
+        />
+      )}
+      {activeMenu === 'contact' && (
+        <div className="dashboard-grid">
+          <AdminContactMessages
+            exporting={exportContactMessagesMutation.isPending}
+            loading={contactMessagesQuery.isLoading}
+            messages={contactMessages}
+            onExport={(format) => exportContactMessagesMutation.mutate(format)}
+          />
+        </div>
+      )}
+    </WorkspaceShell>
+  )
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}

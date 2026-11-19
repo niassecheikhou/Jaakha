@@ -1,0 +1,5 @@
+target/
+data/
+uploads/
+private-uploads/
+.mvn/wrapper/maven-wrapper.jar

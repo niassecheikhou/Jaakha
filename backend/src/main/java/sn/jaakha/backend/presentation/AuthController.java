@@ -9,11 +9,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import sn.jaakha.backend.application.AuthService;
 import sn.jaakha.backend.application.dto.AuthResponse;
+import sn.jaakha.backend.application.dto.ForgotPasswordRequest;
 import sn.jaakha.backend.application.dto.LoginRequest;
-import sn.jaakha.backend.application.dto.OtpRequest;
+import sn.jaakha.backend.application.dto.MessageResponse;
 import sn.jaakha.backend.application.dto.RegisterRequest;
-import sn.jaakha.backend.application.dto.UserResponse;
-import sn.jaakha.backend.application.dto.VerifyOtpRequest;
+import sn.jaakha.backend.application.dto.ResetPasswordRequest;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -24,25 +24,24 @@ public class AuthController {
         this.authService = authService;
     }
 
+    @PostMapping("/login")
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
+    }
+
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
     }
 
-    @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    @PostMapping("/forgot-password")
+    public MessageResponse forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return authService.forgotPassword(request);
     }
 
-    @PostMapping("/request-otp")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void requestOtp(@Valid @RequestBody OtpRequest request) {
-        authService.requestOtp(request);
-    }
-
-    @PostMapping("/verify-email")
-    public UserResponse verifyEmail(@Valid @RequestBody VerifyOtpRequest request) {
-        return authService.verifyEmail(request);
+    @PostMapping("/reset-password")
+    public MessageResponse resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        return authService.resetPassword(request);
     }
 }
