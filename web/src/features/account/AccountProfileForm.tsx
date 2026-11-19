@@ -69,7 +69,6 @@ export function AccountProfileForm({ title, statusText, onSaved }: AccountProfil
     event.preventDefault()
     setError({ message: '', fields: {} })
     saveMutation.mutate({
-      photoUrl: currentPhoto,
       bio: isProviderAccount ? currentBio : '',
       zone: currentZone,
       monthlyRate: isProviderAccount ? currentMonthlyRate : null,

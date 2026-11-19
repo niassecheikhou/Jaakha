@@ -3,10 +3,12 @@ package sn.jaakha.backend.infrastructure.persistence;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import sn.jaakha.backend.application.dto.BookingResponse;
+import sn.jaakha.backend.presentation.ConflictException;
 
 @Repository
 public class BookingAdminRepository {
@@ -23,14 +25,26 @@ public class BookingAdminRepository {
         return jdbcTemplate.query(bookingQuery(" where b.status = ?"), (resultSet, rowNumber) -> mapBooking(resultSet), status);
     }
 
-    public BookingResponse updateStatus(UUID id, String status) {
-        int updated = jdbcTemplate.update(
-                "update booking set status = ?, updated_at = current_timestamp where id = ?",
-                status,
+    public Optional<String> findStatus(UUID id) {
+        return jdbcTemplate.query(
+                "select status from booking where id = ?",
+                (resultSet, rowNumber) -> resultSet.getString("status"),
                 id
+        ).stream().findFirst();
+    }
+
+    /**
+     * Met a jour le statut seulement s'il n'a pas change depuis la lecture.
+     */
+    public BookingResponse updateStatus(UUID id, String expectedStatus, String newStatus) {
+        int updated = jdbcTemplate.update(
+                "update booking set status = ?, updated_at = current_timestamp where id = ? and status = ?",
+                newStatus,
+                id,
+                expectedStatus
         );
         if (updated == 0) {
-            throw new IllegalArgumentException("La reservation est introuvable.");
+            throw new ConflictException("La reservation a ete modifiee entre-temps. Recharge la page puis reessaie.");
         }
         return jdbcTemplate.queryForObject(
                 bookingQuery(" where b.id = ?"),

@@ -47,8 +47,8 @@ public class AccountProfileService {
 
     @Transactional
     public AccountProfileResponse saveMine(String ownerKey, AccountProfileRequest request) {
+        // photoUrl n'est pas modifiable ici : seul l'upload (/api/account/me/photo) le renseigne.
         AccountProfile profile = getOrCreate(ownerKey);
-        profile.setPhotoUrl(blankToNull(request.photoUrl()));
         profile.setBio(blankToNull(request.bio()));
         profile.setZone(blankToNull(request.zone()));
         profile.setMonthlyRate(request.monthlyRate());

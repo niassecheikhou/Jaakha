@@ -6,10 +6,12 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import sn.jaakha.backend.application.dto.BookingResponse;
+import sn.jaakha.backend.presentation.ConflictException;
 
 @Repository
 public class BookingRepository {
@@ -55,18 +57,33 @@ public class BookingRepository {
         );
     }
 
-    public BookingResponse updateStatus(UUID id, String status, UUID actorId, String actorRole) {
+    /**
+     * Statut courant d'une reservation, uniquement si elle appartient a l'acteur (employeur ou prestataire).
+     */
+    public Optional<String> findStatusOwnedBy(UUID id, UUID actorId, String actorRole) {
         String ownershipClause = "PRESTATAIRE".equals(actorRole)
                 ? " and provider_id in (select id from provider_profile where user_id = ?)"
                 : " and employer_id = ?";
-        int updated = jdbcTemplate.update(
-                "update booking set status = ?, updated_at = current_timestamp where id = ?" + ownershipClause,
-                status,
+        return jdbcTemplate.query(
+                "select status from booking where id = ?" + ownershipClause,
+                (resultSet, rowNumber) -> resultSet.getString("status"),
                 id,
                 actorId
+        ).stream().findFirst();
+    }
+
+    /**
+     * Met a jour le statut seulement s'il n'a pas change depuis la lecture (evite deux transitions concurrentes).
+     */
+    public BookingResponse updateStatus(UUID id, String expectedStatus, String newStatus) {
+        int updated = jdbcTemplate.update(
+                "update booking set status = ?, updated_at = current_timestamp where id = ? and status = ?",
+                newStatus,
+                id,
+                expectedStatus
         );
         if (updated == 0) {
-            throw new IllegalArgumentException("La reservation est introuvable ou ne t'appartient pas.");
+            throw new ConflictException("La reservation a ete modifiee entre-temps. Recharge la page puis reessaie.");
         }
         return findById(id);
     }

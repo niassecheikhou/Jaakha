@@ -17,7 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import sn.jaakha.backend.application.ProviderService;
 import sn.jaakha.backend.application.ReviewService;
+
 import sn.jaakha.backend.application.UserAccess;
+
+import sn.jaakha.backend.application.dto.AuthenticatedUser;
+import sn.jaakha.backend.application.dto.PhotoUploadResponse;
 import sn.jaakha.backend.application.dto.ProviderProfileRequest;
 import sn.jaakha.backend.application.dto.ProviderProfileResponse;
 import sn.jaakha.backend.application.dto.ReviewResponse;
@@ -73,8 +77,11 @@ public class ProviderController {
             HttpServletRequest request,
             @RequestParam("file") MultipartFile file
     ) {
+        // Authentification et role verifies AVANT d'ecrire le fichier sur le disque public.
+        AuthenticatedUser user = currentUserService.requireUser(request);
+        providerService.requireProvider(user);
         String relativeUrl = storageService.storeProviderPhoto(file);
-        ProviderProfileResponse profile = providerService.updatePhoto(currentUserService.requireUser(request), absoluteUrl(relativeUrl));
+        ProviderProfileResponse profile = providerService.updatePhoto(user, absoluteUrl(relativeUrl));
         return new PhotoUploadResponse(profile.photoUrl());
     }
 

@@ -41,7 +41,7 @@ services:
       MAIL_FROM: ${MAIL_FROM:-no-reply@jaankha.sn}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PHONE: ${ADMIN_PHONE:-+221770000000}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe123!}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       UPLOAD_DIR: /app/uploads
       PRIVATE_UPLOAD_DIR: /app/private-uploads
     volumes:

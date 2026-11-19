@@ -136,6 +136,7 @@ package sn.jaakha.backend.application;
 
 import java.util.List;
 import java.util.Set;
+
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -151,9 +152,6 @@ import sn.jaakha.backend.presentation.ForbiddenException;
 
 @Service
 public class BookingService {
-    private static final Set<String> ALLOWED_STATUSES = Set.of(
-            "REQUESTED", "ACCEPTED", "IN_PROGRESS", "DONE", "CANCELLED"
-    );
 
     private final BookingRepository bookingRepository;
     private final ProviderProfileRepository providerProfileRepository;
@@ -196,20 +194,14 @@ public class BookingService {
 
     @Transactional
     public BookingResponse updateStatus(AuthenticatedUser user, UUID id, String status) {
-        String cleanStatus = status == null ? "" : status.trim().toUpperCase();
-        if (!ALLOWED_STATUSES.contains(cleanStatus)) {
-            throw new IllegalArgumentException("Le statut de reservation est invalide.");
-        }
-        if ("EMPLOYEUR".equals(user.role()) && !"CANCELLED".equals(cleanStatus)) {
-            throw new ForbiddenException("Un employeur peut seulement annuler sa reservation.");
-        }
-        if ("PRESTATAIRE".equals(user.role()) && "CANCELLED".equals(cleanStatus)) {
-            throw new ForbiddenException("Un prestataire peut accepter, demarrer ou terminer une mission.");
-        }
+        String targetStatus = BookingStatusPolicy.normalize(status);
         if (!"EMPLOYEUR".equals(user.role()) && !"PRESTATAIRE".equals(user.role())) {
             throw new ForbiddenException("Tu dois etre connecte avec un compte employeur ou prestataire.");
         }
-        return bookingRepository.updateStatus(id, cleanStatus, user.id(), user.role());
+        String currentStatus = bookingRepository.findStatusOwnedBy(id, user.id(), user.role())
+                .orElseThrow(() -> new IllegalArgumentException("La reservation est introuvable ou ne t'appartient pas."));
+        BookingStatusPolicy.assertTransition(user.role(), currentStatus, targetStatus);
+        return bookingRepository.updateStatus(id, currentStatus, targetStatus);
     }
 
     private void requireRole(AuthenticatedUser user, String role, String message) {

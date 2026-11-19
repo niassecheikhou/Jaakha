@@ -12,18 +12,36 @@ import sn.jaakha.backend.application.dto.AuthenticatedUser;
 import sn.jaakha.backend.application.dto.ProviderProfileRequest;
 import sn.jaakha.backend.application.dto.ProviderProfileResponse;
 import sn.jaakha.backend.domain.enums.ProviderStatus;
+import sn.jaakha.backend.domain.model.AccountProfile;
 import sn.jaakha.backend.domain.model.ProviderProfile;
+import sn.jaakha.backend.domain.repository.AccountProfileRepository;
 import sn.jaakha.backend.domain.repository.ProviderProfileRepository;
 import sn.jaakha.backend.infrastructure.persistence.UserAccountRepository;
+import sn.jaakha.backend.presentation.ForbiddenException;
 
 @Service
 public class ProviderService {
     private final ProviderProfileRepository providerProfileRepository;
     private final UserAccountRepository userAccountRepository;
+    private final AccountProfileRepository accountProfileRepository;
 
-    public ProviderService(ProviderProfileRepository providerProfileRepository, UserAccountRepository userAccountRepository) {
+    public ProviderService(
+            ProviderProfileRepository providerProfileRepository,
+            UserAccountRepository userAccountRepository,
+            AccountProfileRepository accountProfileRepository
+    ) {
         this.providerProfileRepository = providerProfileRepository;
         this.userAccountRepository = userAccountRepository;
+        this.accountProfileRepository = accountProfileRepository;
+    }
+
+    /**
+     * Seul un compte PRESTATAIRE peut posseder et modifier un profil prestataire.
+     */
+    public void requireProvider(AuthenticatedUser user) {
+        if (!"PRESTATAIRE".equals(user.role())) {
+            throw new ForbiddenException("Seuls les comptes prestataires peuvent gerer un profil prestataire.");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -50,13 +68,19 @@ public class ProviderService {
 
     @Transactional
     public ProviderProfileResponse getMine(AuthenticatedUser user) {
+        requireProvider(user);
         return ProviderProfileResponse.from(getOrCreateProfile(user));
     }
 
     @Transactional
     public ProviderProfileResponse saveMine(AuthenticatedUser user, ProviderProfileRequest request) {
+        requireProvider(user);
         ProviderProfile profile = getOrCreateProfile(user);
-        profile.setPhotoUrl(blankToNull(request.photoUrl()));
+        // La photo publique n'est jamais prise dans la requete : on reprend celle deposee via l'upload du compte.
+        String accountPhoto = uploadedAccountPhoto(user);
+        if (accountPhoto != null) {
+            profile.setPhotoUrl(accountPhoto);
+        }
         profile.setBio(blankToNull(request.bio()));
         profile.setZone(request.zone().trim());
         profile.setHourlyRate(request.monthlyRate());
@@ -67,6 +91,7 @@ public class ProviderService {
 
     @Transactional
     public ProviderProfileResponse updatePhoto(AuthenticatedUser user, String photoUrl) {
+        requireProvider(user);
         ProviderProfile profile = getOrCreateProfile(user);
         profile.setPhotoUrl(photoUrl);
         return ProviderProfileResponse.from(providerProfileRepository.save(profile));
@@ -77,6 +102,12 @@ public class ProviderService {
         return providerProfileRepository.findByUserId(user.id())
                 .or(() -> providerProfileRepository.findByOwnerKey(ownerKey))
                 .orElseGet(() -> providerProfileRepository.save(new ProviderProfile(ownerKey, user.id(), user.fullName())));
+    }
+
+    private String uploadedAccountPhoto(AuthenticatedUser user) {
+        return accountProfileRepository.findByOwnerKey(user.id().toString())
+                .map(AccountProfile::getPhotoUrl)
+                .orElse(null);
     }
 
     private Set<String> cleanSkills(List<String> skills) {

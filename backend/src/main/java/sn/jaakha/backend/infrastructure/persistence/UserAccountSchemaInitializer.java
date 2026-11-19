@@ -17,7 +17,7 @@ public class UserAccountSchemaInitializer {
             PasswordEncoder passwordEncoder,
             @Value("${ADMIN_EMAIL:}") String adminEmail,
             @Value("${ADMIN_PHONE:+221770000000}") String adminPhone,
-            @Value("${ADMIN_PASSWORD:ChangeMe123!}") String adminPassword
+            @Value("${ADMIN_PASSWORD:}") String adminPassword
     ) {
         return args -> {
             jdbcTemplate.execute("""
@@ -139,7 +139,11 @@ public class UserAccountSchemaInitializer {
         };
     }
 
-    private void ensureAdminAccount(
+    /**
+     * Cree le compte administrateur initial. Aucun mot de passe par defaut : si ADMIN_EMAIL est
+     * renseigne sans ADMIN_PASSWORD, le demarrage echoue plutot que de creer un admin au mot de passe connu.
+     */
+    void ensureAdminAccount(
             JdbcTemplate jdbcTemplate,
             PasswordEncoder passwordEncoder,
             String adminEmail,
@@ -148,6 +152,11 @@ public class UserAccountSchemaInitializer {
     ) {
         if (adminEmail == null || adminEmail.isBlank()) {
             return;
+        }
+        if (adminPassword == null || adminPassword.isBlank()) {
+            throw new IllegalStateException(
+                    "ADMIN_PASSWORD doit etre defini lorsque ADMIN_EMAIL est renseigne (aucun mot de passe par defaut)."
+            );
         }
 
         Integer existingAdmins = jdbcTemplate.queryForObject(

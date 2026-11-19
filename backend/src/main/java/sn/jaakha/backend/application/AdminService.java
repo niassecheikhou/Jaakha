@@ -129,7 +129,11 @@ public class AdminService {
 
     @Transactional
     public BookingResponse updateBookingStatus(UUID id, String status) {
-        BookingResponse booking = bookingAdminRepository.updateStatus(id, status);
+        String targetStatus = BookingStatusPolicy.normalize(status);
+        String currentStatus = bookingAdminRepository.findStatus(id)
+                .orElseThrow(() -> new IllegalArgumentException("La reservation est introuvable."));
+        BookingStatusPolicy.assertTransition("ADMIN", currentStatus, targetStatus);
+        BookingResponse booking = bookingAdminRepository.updateStatus(id, currentStatus, targetStatus);
         notificationService.notifyParticipantsAboutBookingStatus(booking);
         return booking;
     }

@@ -14,7 +14,6 @@ export function ProviderProfileForm() {
 
   async function syncProviderProfile(payload: AccountProfilePayload) {
     await providersApi.saveMine({
-      photoUrl: payload.photoUrl,
       bio: payload.bio,
       zone: payload.zone,
       monthlyRate: payload.monthlyRate ?? 0,
