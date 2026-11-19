@@ -97,6 +97,20 @@ public class ProviderService {
         return ProviderProfileResponse.from(providerProfileRepository.save(profile));
     }
 
+    /**
+     * Recopie la photo du compte sur le profil public, uniquement pour un compte PRESTATAIRE
+     * (employeurs et administrateurs n'ont pas de profil public).
+     */
+    @Transactional
+    public void syncAccountPhoto(AuthenticatedUser user, String photoUrl) {
+        if (!"PRESTATAIRE".equals(user.role())) {
+            return;
+        }
+        ProviderProfile profile = getOrCreateProfile(user);
+        profile.setPhotoUrl(photoUrl);
+        providerProfileRepository.save(profile);
+    }
+
     private ProviderProfile getOrCreateProfile(AuthenticatedUser user) {
         String ownerKey = user.id().toString();
         return providerProfileRepository.findByUserId(user.id())

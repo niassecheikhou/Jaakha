@@ -1,1 +1,1 @@
-export type AdminMenu = 'dashboard' | 'accounts' | 'bookings' | 'contact'
+export type AdminMenu = 'dashboard' | 'accounts' | 'bookings' | 'contact' | 'profile'

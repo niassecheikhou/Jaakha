@@ -55,6 +55,26 @@ if [[ -n "$TOKEN" ]]; then
     "$(status -H "Authorization: Bearer $TOKEN" "$WEB_URL/api/account/me")"
   check "employeur refuse sur /api/admin/users -> 403" 403 \
     "$(status -H "Authorization: Bearer $TOKEN" "$WEB_URL/api/admin/users")"
+
+  # Photo de profil : upload d'une image PNG 1x1 puis lecture de l'URL publique renvoyee.
+  # Chemin relatif : lisible aussi par le curl de Git Bash sous Windows (qui ne resout pas /tmp).
+  PHOTO_FILE="smoke-photo-$SUFFIX.png"
+  trap 'rm -f "$PHOTO_FILE"' EXIT
+  printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' \
+    | base64 -d > "$PHOTO_FILE"
+  PHOTO_RESPONSE=$(curl -s -w '\n%{http_code}' -X POST "$WEB_URL/api/account/me/photo" \
+    -H "Authorization: Bearer $TOKEN" -F "file=@$PHOTO_FILE;type=image/png" || true)
+  check "upload photo de profil /api/account/me/photo" 200 "$(tail -n1 <<<"$PHOTO_RESPONSE")"
+  PHOTO_URL=$(head -n -1 <<<"$PHOTO_RESPONSE" | sed -n 's/.*"photoUrl":"\([^"]*\)".*/\1/p')
+  if [[ -n "$PHOTO_URL" ]]; then
+    check "photo de profil servie ($PHOTO_URL)" 200 "$(status "$PHOTO_URL")"
+  else
+    echo "FAIL aucune URL de photo renvoyee"
+    FAILURES=$((FAILURES + 1))
+  fi
+  check "upload photo sans token -> 401" 401 \
+    "$(status -X POST "$WEB_URL/api/account/me/photo" -F "file=@$PHOTO_FILE;type=image/png")"
+  rm -f "$PHOTO_FILE"
 else
   echo "FAIL aucun token renvoye par l'inscription"
   FAILURES=$((FAILURES + 1))

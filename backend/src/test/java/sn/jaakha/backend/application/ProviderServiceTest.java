@@ -80,4 +80,26 @@ class ProviderServiceTest {
 
         assertThat(response.photoUrl()).isEqualTo("http://localhost:8080/uploads/providers/old.jpg");
     }
+
+    @Test
+    void accountPhotoIsCopiedToPublicProfileForProviders() {
+        ProviderProfile profile = new ProviderProfile(provider.id().toString(), provider.id(), provider.fullName());
+        when(providerProfileRepository.findByUserId(provider.id())).thenReturn(Optional.of(profile));
+
+        providerService.syncAccountPhoto(provider, "http://localhost:8080/uploads/profiles/new.jpg");
+
+        assertThat(profile.getPhotoUrl()).isEqualTo("http://localhost:8080/uploads/profiles/new.jpg");
+        verify(providerProfileRepository).save(profile);
+    }
+
+    @Test
+    void accountPhotoIsNotCopiedForEmployersOrAdmins() {
+        for (String role : List.of("EMPLOYEUR", "ADMIN")) {
+            AuthenticatedUser user = new AuthenticatedUser(UUID.randomUUID(), "Utilisateur", role);
+            providerService.syncAccountPhoto(user, "http://localhost:8080/uploads/profiles/x.jpg");
+        }
+
+        verify(providerProfileRepository, never()).save(any());
+        verify(providerProfileRepository, never()).findByUserId(any());
+    }
 }

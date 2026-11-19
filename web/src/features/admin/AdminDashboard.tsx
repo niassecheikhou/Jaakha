@@ -18,6 +18,8 @@ import {
 } from './AdminIcons'
 import { BookingMetricCard, BookingsManagement, DashboardOverview } from './AdminBookings'
 import { AdminContactMessages } from './AdminContactMessages'
+import { AdminProfilePanel } from './AdminProfilePanel'
+import { ProfileIcon } from '../employer/EmployerIcons'
 import { ProviderProfilesReview } from './AdminProviders'
 import { CreateUserForm } from './CreateUserForm'
 import { CsvUsersImport } from './CsvUsersImport'
@@ -139,6 +141,11 @@ export function AdminDashboard() {
       icon: <MailIcon />,
       badge: contactMessages.length.toLocaleString('fr-FR'),
     },
+    {
+      id: 'profile',
+      label: 'Mon profil',
+      icon: <ProfileIcon />,
+    },
   ]
 
   return (
@@ -202,6 +209,7 @@ export function AdminDashboard() {
           onStatusChange={(booking, status) => bookingStatusMutation.mutate({ id: booking.id, bookingReference: bookingReference(booking.id), status })}
         />
       )}
+      {activeMenu === 'profile' && <AdminProfilePanel />}
       {activeMenu === 'contact' && (
         <div className="dashboard-grid">
           <AdminContactMessages

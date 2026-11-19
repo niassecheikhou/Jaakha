@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import sn.jaakha.backend.application.AccountProfileService;
 import sn.jaakha.backend.application.CurrentUserService;
+import sn.jaakha.backend.application.ProviderService;
 import sn.jaakha.backend.application.dto.AccountProfileRequest;
 import sn.jaakha.backend.application.dto.AccountProfileResponse;
 import sn.jaakha.backend.application.dto.AuthenticatedUser;
@@ -30,15 +31,18 @@ public class AccountProfileController {
     private final AccountProfileService accountProfileService;
     private final StorageService storageService;
     private final CurrentUserService currentUserService;
+    private final ProviderService providerService;
 
     public AccountProfileController(
             AccountProfileService accountProfileService,
             StorageService storageService,
-            CurrentUserService currentUserService
+            CurrentUserService currentUserService,
+            ProviderService providerService
     ) {
         this.accountProfileService = accountProfileService;
         this.storageService = storageService;
         this.currentUserService = currentUserService;
+        this.providerService = providerService;
     }
 
     @GetMapping
@@ -65,6 +69,8 @@ public class AccountProfileController {
                 user.id().toString(),
                 absoluteUrl(relativeUrl)
         );
+        // Prestataire : la photo publique est mise a jour tout de suite, sans attendre l'enregistrement du dossier.
+        providerService.syncAccountPhoto(user, profile.photoUrl());
         return new PhotoUploadResponse(profile.photoUrl());
     }
 
