@@ -2,6 +2,7 @@ package sn.jaakha.backend.infrastructure.persistence;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -23,7 +24,7 @@ public class UserAccountRepository {
     public List<UserResponse> findAll() {
         return jdbcTemplate.query("""
                         select u.id, u.full_name, u.email, u.phone, u.role, u.email_verified,
-                               u.active, u.archived, p.photo_url, p.identity_photo_url, p.identity_photo_back_url,
+                               u.active, u.archived, u.created_at, p.photo_url, p.identity_photo_url, p.identity_photo_back_url,
                                p.bio, p.zone, p.monthly_rate, p.experience_years,
                                p.skills, p.guardian_full_name, p.guardian_phone
                         from app_user u
@@ -37,7 +38,7 @@ public class UserAccountRepository {
     public Optional<UserResponse> findById(UUID id) {
         List<UserResponse> users = jdbcTemplate.query("""
                         select u.id, u.full_name, u.email, u.phone, u.role, u.email_verified,
-                               u.active, u.archived, p.photo_url, p.identity_photo_url, p.identity_photo_back_url,
+                               u.active, u.archived, u.created_at, p.photo_url, p.identity_photo_url, p.identity_photo_back_url,
                                p.bio, p.zone, p.monthly_rate, p.experience_years,
                                p.skills, p.guardian_full_name, p.guardian_phone
                         from app_user u
@@ -124,7 +125,8 @@ public class UserAccountRepository {
                 resultSet.getInt("experience_years"),
                 splitSkills(resultSet.getString("skills")),
                 resultSet.getString("guardian_full_name"),
-                resultSet.getString("guardian_phone")
+                resultSet.getString("guardian_phone"),
+                createdAt(resultSet)
         );
     }
 
@@ -136,6 +138,11 @@ public class UserAccountRepository {
             return null;
         }
         return "/api/admin/users/" + resultSet.getObject("id", UUID.class) + "/identity-photo" + sidePath;
+    }
+
+    private String createdAt(ResultSet resultSet) throws SQLException {
+        Timestamp createdAt = resultSet.getTimestamp("created_at");
+        return createdAt == null ? null : createdAt.toInstant().toString();
     }
 
     private List<String> splitSkills(String skills) {

@@ -143,7 +143,7 @@ public class AuthService {
     private List<UserWithPassword> findByIdentifier(String identifier) {
         String cleanIdentifier = identifier.trim().toLowerCase(Locale.ROOT);
         return jdbcTemplate.query("""
-                        select id, full_name, email, phone, role, email_verified, active, archived, password_hash
+                        select id, full_name, email, phone, role, email_verified, active, archived, created_at, password_hash
                         from app_user
                         where archived = false and (lower(email) = ? or phone = ?)
                         """,
@@ -155,7 +155,7 @@ public class AuthService {
 
     private UserResponse findById(UUID userId) {
         return jdbcTemplate.queryForObject("""
-                        select id, full_name, email, phone, role, email_verified, active, archived
+                        select id, full_name, email, phone, role, email_verified, active, archived, created_at
                         from app_user
                         where id = ?
                         """,
@@ -242,8 +242,14 @@ public class AuthService {
                 0,
                 List.of(),
                 null,
-                null
+                null,
+                createdAt(resultSet)
         );
+    }
+
+    private String createdAt(ResultSet resultSet) throws SQLException {
+        Timestamp createdAt = resultSet.getTimestamp("created_at");
+        return createdAt == null ? null : createdAt.toInstant().toString();
     }
 
     private record UserWithPassword(UserResponse response, String passwordHash) {

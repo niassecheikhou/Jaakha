@@ -19,4 +19,6 @@ export type User = {
   skills: string[]
   guardianFullName: string | null
   guardianPhone: string | null
+  // Date d'inscription (ISO-8601).
+  createdAt: string | null
 }

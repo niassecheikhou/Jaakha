@@ -50,6 +50,12 @@ REGISTER_RESPONSE=$(curl -s -w '\n%{http_code}' -X POST "$WEB_URL/api/auth/regis
   -H 'Content-Type: application/json' -d "$REGISTER_BODY")
 check "inscription /api/auth/register" 201 "$(tail -n1 <<<"$REGISTER_RESPONSE")"
 TOKEN=$(head -n -1 <<<"$REGISTER_RESPONSE" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+if grep -q '"createdAt":"[0-9]\{4\}-' <<<"$REGISTER_RESPONSE"; then
+  echo "OK   date d'inscription renvoyee (createdAt, filtres par periode du dashboard)"
+else
+  echo "FAIL date d'inscription absente de la reponse"
+  FAILURES=$((FAILURES + 1))
+fi
 if [[ -n "$TOKEN" ]]; then
   check "profil avec token /api/account/me" 200 \
     "$(status -H "Authorization: Bearer $TOKEN" "$WEB_URL/api/account/me")"

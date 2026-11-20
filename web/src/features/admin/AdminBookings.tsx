@@ -64,16 +64,20 @@ export function BookingMetricCard({
   icon,
   label,
   value,
+  caption,
 }: {
   icon: ReactNode
   label: string
   value: string
+  // Periode a laquelle se rapporte le chiffre (ex. "Annee 2026").
+  caption?: string
 }) {
   return (
     <article className="booking-metric-card">
       <div>
         <strong>{value}</strong>
         <span>{label}</span>
+        {caption && <small className="booking-metric-caption">{caption}</small>}
       </div>
       <span className="booking-metric-icon">{icon}</span>
     </article>

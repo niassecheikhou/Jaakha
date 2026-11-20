@@ -2031,7 +2031,78 @@ textarea:focus {
 }
 
 .admin-overview-metrics {
+  /* Les 4 indicateurs sur une ligne des que la largeur le permet. */
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 18px;
   margin-bottom: 6px;
+}
+
+.booking-metric-card .booking-metric-caption {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Barre "Periode d'analyse" (components/PeriodFilter.tsx) */
+.period-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(33, 46, 83, 0.04);
+}
+
+.period-filter-label {
+  color: var(--primary-dark);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.period-filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.period-filter-options button,
+.period-filter-reset {
+  min-height: 34px;
+  padding: 0 14px;
+  color: var(--primary-dark);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.period-filter-options button:hover {
+  border-color: var(--primary);
+}
+
+.period-filter-options button.active {
+  color: var(--white);
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.period-filter-reset {
+  margin-left: auto;
+}
+
+.period-filter-reset:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+
+.period-filter-reset:disabled {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .booking-metric-card,
