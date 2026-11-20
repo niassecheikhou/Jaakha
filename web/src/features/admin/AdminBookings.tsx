@@ -1,12 +1,62 @@
 import { useState, type ReactNode } from 'react'
+import { ActionsMenu, type ActionsMenuItem } from '../../components/ActionsMenu'
 import { StatusBadge } from '../../components/StatusBadge'
 import type { Booking, BookingStatus, ProviderProfile, User } from '../../types/api'
 import { formatPrice, formatStatus } from '../../utils/format'
-import { ActivityIcon } from './AdminIcons'
+import { ActivityIcon, CheckIcon, FlagIcon, PlayIcon, XIcon } from './AdminIcons'
 import { bookingReference } from './admin-booking-utils'
 import { displayRole } from './admin-utils'
 
-const bookingStatuses: BookingStatus[] = ['REQUESTED', 'ACCEPTED', 'IN_PROGRESS', 'DONE', 'CANCELLED']
+// Cycle de vie impose par le backend (BookingStatusPolicy) : REQUESTED -> ACCEPTED -> IN_PROGRESS -> DONE,
+// annulation possible tant que la mission n'est pas terminee. DONE et CANCELLED sont definitifs.
+const bookingSteps: { target: BookingStatus; label: string; statusLabel: string; waitingFor: string; icon: ReactNode }[] = [
+  { target: 'ACCEPTED', label: 'Accepter la reservation', statusLabel: 'Acceptee', waitingFor: 'Etape 1', icon: <CheckIcon /> },
+  { target: 'IN_PROGRESS', label: 'Demarrer la mission', statusLabel: 'En cours', waitingFor: 'Apres acceptation', icon: <PlayIcon /> },
+  { target: 'DONE', label: 'Terminer la mission', statusLabel: 'Terminee', waitingFor: 'Apres le demarrage', icon: <FlagIcon /> },
+]
+const stepOrder: BookingStatus[] = ['REQUESTED', 'ACCEPTED', 'IN_PROGRESS', 'DONE']
+
+// Menu d'une reservation : toutes les etapes restantes du parcours sont visibles ;
+// seule l'etape suivante est cliquable, les suivantes sont grisees avec leur condition.
+function bookingActions(
+  booking: Booking,
+  loading: boolean,
+  onStatusChange: (booking: Booking, status: BookingStatus) => void,
+): ActionsMenuItem[] {
+  const currentIndex = stepOrder.indexOf(booking.status)
+  const steps: ActionsMenuItem[] = bookingSteps
+    .filter((step) => stepOrder.indexOf(step.target) > currentIndex)
+    .map((step) => {
+      const isNext = stepOrder.indexOf(step.target) === currentIndex + 1
+      return {
+        id: step.target,
+        label: step.label,
+        icon: step.icon,
+        tone: step.target === 'IN_PROGRESS' ? 'view' : 'approve',
+        hint: isNext ? `Nouveau statut : ${step.statusLabel}` : step.waitingFor,
+        unavailable: !isNext,
+        disabled: loading,
+        onSelect: () => onStatusChange(booking, step.target),
+      }
+    })
+  return [
+    ...steps,
+    {
+      id: 'cancel',
+      label: 'Annuler la reservation',
+      icon: <XIcon />,
+      tone: 'reject',
+      hint: 'Definitif',
+      disabled: loading,
+      onSelect: () => {
+        if (window.confirm(`Annuler la reservation ${bookingReference(booking.id)} ? Cette action est definitive.`)) {
+          onStatusChange(booking, 'CANCELLED')
+        }
+      },
+    },
+  ]
+}
+
 const estimatedHourlyRate = 5000
 const monthLabelFormatter = new Intl.DateTimeFormat('fr-FR', { month: 'short' })
 
@@ -302,7 +352,7 @@ function RecentBookingsTable({
                 <th>Client</th>
                 <th>Statut</th>
                 <th>Montant</th>
-                <th>Action</th>
+                <th className="actions-column">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -317,19 +367,15 @@ function RecentBookingsTable({
                   <td>{booking.employerName}</td>
                   <td><StatusBadge status={booking.status} /></td>
                   <td>{formatPrice(bookingAmount(booking))}</td>
-                  <td>
-                    <select
-                      aria-label={`Changer le statut de la reservation ${bookingReference(booking.id)}`}
-                      disabled={loading}
-                      value={booking.status}
-                      onChange={(event) => onStatusChange(booking, event.target.value as BookingStatus)}
-                    >
-                      {bookingStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {formatStatus(status)}
-                        </option>
-                      ))}
-                    </select>
+                  <td className="actions-column">
+                    {booking.status === 'DONE' || booking.status === 'CANCELLED' ? (
+                      <span className="muted">Cloturee</span>
+                    ) : (
+                      <ActionsMenu
+                        subject={`la reservation ${bookingReference(booking.id)}`}
+                        items={bookingActions(booking, loading, onStatusChange)}
+                      />
+                    )}
                   </td>
                 </tr>
               ))}
