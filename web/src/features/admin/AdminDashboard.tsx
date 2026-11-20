@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FormError } from '../../components/FormError'
+import { PeriodFilter } from '../../components/PeriodFilter'
 import { useToast } from '../../components/toast-context'
 import { WorkspaceShell, type WorkspaceNavItem } from '../../components/WorkspaceShell'
 import { useAuth } from '../../hooks/use-auth'
 import { adminApi, getApiError } from '../../services/api'
 import type { AdminCreateUserPayload, BookingStatus, ProviderStatus, User } from '../../types/api'
+import { isWithinPeriod, periodRange, type AnalysisPeriod } from '../../utils/analysis-period'
 import { formatStatus } from '../../utils/format'
 import { AccountsTable, UserDetailPanel } from './AdminAccounts'
 import {
@@ -32,6 +34,7 @@ export function AdminDashboard() {
   const queryClient = useQueryClient()
   const toast = useToast()
   const [activeMenu, setActiveMenu] = useState<AdminMenu>('dashboard')
+  const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod | null>(null)
   const [adminError, setAdminError] = useState({ message: '', fields: {} })
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: adminApi.users })
@@ -113,10 +116,32 @@ export function AdminDashboard() {
 
   const manageableUsers = usersQuery.data?.filter((currentUser) => currentUser.role === 'EMPLOYEUR' || currentUser.role === 'PRESTATAIRE') ?? []
   const providers = providersQuery.data ?? []
-  const pendingProfileApprovals = countPendingProfileApprovals(manageableUsers, providers)
   const bookings = bookingsQuery.data ?? []
   const pendingBookings = bookings.filter((booking) => booking.status === 'REQUESTED')
   const contactMessages = contactMessagesQuery.data ?? []
+
+  // Indicateurs du dashboard, recalcules selon la periode d'analyse choisie.
+  // (Les badges du menu restent globaux : ils signalent tout ce qui attend une action.)
+  const periodMetrics = useMemo(() => {
+    const range = analysisPeriod ? periodRange(analysisPeriod) : null
+    const allUsers = usersQuery.data ?? []
+    const allBookings = bookingsQuery.data ?? []
+    const allProviders = providersQuery.data ?? []
+    const usersInPeriod = allUsers.filter((account) => isWithinPeriod(account.createdAt, range))
+    const userIdsInPeriod = new Set(usersInPeriod.map((account) => account.id))
+    const bookingsInPeriod = allBookings.filter((booking) => isWithinPeriod(booking.createdAt, range))
+    return {
+      caption: range ? range.label : 'Depuis le début',
+      users: usersInPeriod.length,
+      pendingProfiles: countPendingProfileApprovals(
+        usersInPeriod.filter((account) => account.role === 'EMPLOYEUR' || account.role === 'PRESTATAIRE'),
+        // Un profil prestataire est rattache a la periode d'inscription de son compte.
+        allProviders.filter((provider) => userIdsInPeriod.has(provider.userId)),
+      ),
+      bookings: bookingsInPeriod.length,
+      pendingBookings: bookingsInPeriod.filter((booking) => booking.status === 'REQUESTED').length,
+    }
+  }, [analysisPeriod, usersQuery.data, bookingsQuery.data, providersQuery.data])
   const adminItems: WorkspaceNavItem<AdminMenu>[] = [
     {
       id: 'dashboard',
@@ -160,13 +185,14 @@ export function AdminDashboard() {
     >
       {activeMenu === 'dashboard' && (
         <>
+          <PeriodFilter value={analysisPeriod} onChange={setAnalysisPeriod} />
           <div className="booking-metrics-grid admin-overview-metrics">
-            <BookingMetricCard icon={<UsersIcon />} label="Utilisateurs" value={(usersQuery.data?.length ?? 0).toLocaleString('fr-FR')} />
-            <BookingMetricCard icon={<ProfilePendingIcon />} label="Profils en attente" value={pendingProfileApprovals.toLocaleString('fr-FR')} />
-            <BookingMetricCard icon={<BagIcon />} label="Reservation totale" value={bookings.length.toLocaleString('fr-FR')} />
-            <BookingMetricCard icon={<HourglassIcon />} label="Reservation en attente" value={pendingBookings.length.toLocaleString('fr-FR')} />
+            <BookingMetricCard icon={<UsersIcon />} label="Utilisateurs" value={periodMetrics.users.toLocaleString('fr-FR')} caption={periodMetrics.caption} />
+            <BookingMetricCard icon={<ProfilePendingIcon />} label="Profils en attente" value={periodMetrics.pendingProfiles.toLocaleString('fr-FR')} caption={periodMetrics.caption} />
+            <BookingMetricCard icon={<BagIcon />} label="Reservation totale" value={periodMetrics.bookings.toLocaleString('fr-FR')} caption={periodMetrics.caption} />
+            <BookingMetricCard icon={<HourglassIcon />} label="Reservation en attente" value={periodMetrics.pendingBookings.toLocaleString('fr-FR')} caption={periodMetrics.caption} />
           </div>
-          <DashboardOverview bookings={bookings} providers={providers} users={usersQuery.data ?? []} />
+          <DashboardOverview bookings={bookings} providers={providers} users={usersQuery.data ?? []} period={analysisPeriod} />
         </>
       )}
       {usersQuery.isError && <p className="empty-state">Impossible de charger les utilisateurs.</p>}

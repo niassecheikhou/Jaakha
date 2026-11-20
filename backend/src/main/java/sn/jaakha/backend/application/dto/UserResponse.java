@@ -22,6 +22,8 @@ public record UserResponse(
         int experienceYears,
         List<String> skills,
         String guardianFullName,
-        String guardianPhone
+        String guardianPhone,
+        // Date d'inscription (ISO-8601), utilisee pour filtrer les indicateurs du dashboard par periode.
+        String createdAt
 ) {
 }
