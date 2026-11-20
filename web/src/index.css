@@ -2043,6 +2043,41 @@ textarea:focus {
   font-weight: 700;
 }
 
+/* Indicateurs du dashboard admin (4 par ligne) : cartes plus etroites, donc icone
+   plus petite et texte qui occupe tout l'espace restant sans passer sous l'icone. */
+.admin-overview-metrics .booking-metric-card {
+  min-height: 112px;
+  gap: 12px;
+  padding: 20px 18px;
+}
+
+.admin-overview-metrics .booking-metric-card div {
+  flex: 1 1 auto;
+  gap: 6px;
+}
+
+.admin-overview-metrics .booking-metric-card strong {
+  font-size: 28px;
+}
+
+.admin-overview-metrics .booking-metric-card span:not(.booking-metric-icon) {
+  font-size: 14px;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.admin-overview-metrics .booking-metric-icon {
+  width: 46px;
+  height: 46px;
+  border-width: 5px;
+  align-self: flex-start;
+}
+
+.admin-overview-metrics .booking-metric-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
 /* Barre "Periode d'analyse" (components/PeriodFilter.tsx) */
 .period-filter {
   display: flex;
