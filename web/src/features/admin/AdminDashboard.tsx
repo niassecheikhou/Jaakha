@@ -192,7 +192,7 @@ export function AdminDashboard() {
             <BookingMetricCard icon={<BagIcon />} label="Reservation totale" value={periodMetrics.bookings.toLocaleString('fr-FR')} caption={periodMetrics.caption} />
             <BookingMetricCard icon={<HourglassIcon />} label="Reservation en attente" value={periodMetrics.pendingBookings.toLocaleString('fr-FR')} caption={periodMetrics.caption} />
           </div>
-          <DashboardOverview bookings={bookings} providers={providers} users={usersQuery.data ?? []} />
+          <DashboardOverview bookings={bookings} providers={providers} users={usersQuery.data ?? []} period={analysisPeriod} />
         </>
       )}
       {usersQuery.isError && <p className="empty-state">Impossible de charger les utilisateurs.</p>}

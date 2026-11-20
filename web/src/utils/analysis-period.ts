@@ -54,3 +54,52 @@ export function isWithinPeriod(isoDate: string | null | undefined, range: Period
   const date = new Date(isoDate)
   return !Number.isNaN(date.getTime()) && date >= range.start && date < range.end
 }
+
+export type PeriodBucket = {
+  key: string
+  // Libelle court de l'axe et de la legende (ex. "nov", "S2").
+  label: string
+  start: Date
+  end: Date
+}
+
+const shortMonthFormatter = new Intl.DateTimeFormat('fr-FR', { month: 'short' })
+
+function monthBucket(year: number, month: number): PeriodBucket {
+  const start = new Date(year, month, 1)
+  return {
+    key: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`,
+    label: shortMonthFormatter.format(start).replace('.', ''),
+    start,
+    end: new Date(year, month + 1, 1),
+  }
+}
+
+// Decoupage d'une periode pour les graphiques :
+// - Mois : par semaine (1-7, 8-14, 15-21, 22-28, 29-fin)
+// - Trimestre / Semestre / Annee : par mois
+// - Sans periode : les 12 derniers mois
+export function periodBuckets(period: AnalysisPeriod | null, now: Date = new Date()): { buckets: PeriodBucket[]; unit: string } {
+  if (period === null) {
+    const buckets = Array.from({ length: 12 }, (_, index) => monthBucket(now.getFullYear(), now.getMonth() - 11 + index))
+    return { buckets, unit: 'Les 12 derniers mois' }
+  }
+  const range = periodRange(period, now)
+  if (period === 'month') {
+    const buckets: PeriodBucket[] = []
+    for (let day = 1, week = 1; day <= 31; day += 7, week += 1) {
+      const start = new Date(range.start.getFullYear(), range.start.getMonth(), day)
+      if (start >= range.end) {
+        break
+      }
+      const nextStart = new Date(range.start.getFullYear(), range.start.getMonth(), day + 7)
+      buckets.push({ key: `week-${week}`, label: `S${week}`, start, end: nextStart < range.end ? nextStart : range.end })
+    }
+    return { buckets, unit: `${range.label}, par semaine` }
+  }
+  const buckets: PeriodBucket[] = []
+  for (let date = range.start; date < range.end; date = new Date(date.getFullYear(), date.getMonth() + 1, 1)) {
+    buckets.push(monthBucket(date.getFullYear(), date.getMonth()))
+  }
+  return { buckets, unit: `${range.label}, par mois` }
+}

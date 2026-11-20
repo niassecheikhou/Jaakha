@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { ActionsMenu, type ActionsMenuItem } from '../../components/ActionsMenu'
 import { StatusBadge } from '../../components/StatusBadge'
 import type { Booking, BookingStatus, ProviderProfile, User } from '../../types/api'
+import { isWithinPeriod, periodBuckets, periodRange, type AnalysisPeriod } from '../../utils/analysis-period'
 import { formatPrice, formatStatus } from '../../utils/format'
 import { ActivityIcon, CheckIcon, FlagIcon, PlayIcon, XIcon } from './AdminIcons'
 import { bookingReference } from './admin-booking-utils'
@@ -58,7 +59,6 @@ function bookingActions(
 }
 
 const estimatedHourlyRate = 5000
-const monthLabelFormatter = new Intl.DateTimeFormat('fr-FR', { month: 'short' })
 
 export function BookingMetricCard({
   icon,
@@ -96,36 +96,14 @@ function formatBookingDate(value: string) {
   }).format(new Date(value))
 }
 
-function monthKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-}
-
-function parseBookingDate(value: string) {
-  const [year, month, day] = value.split('-').map(Number)
-  const date = new Date(year, month - 1, day)
-  return Number.isNaN(date.getTime()) ? null : date
-}
-
-function BookingsChart({ bookings }: { bookings: Booking[] }) {
-  const currentMonth = new Date()
-  const months = Array.from({ length: 12 }, (_, index) => {
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 11 + index, 1)
-    return {
-      key: monthKey(date),
-      label: monthLabelFormatter.format(date).replace('.', ''),
-    }
-  })
-  const bookingCountsByMonth = bookings.reduce<Record<string, number>>((counts, booking) => {
-    const bookingDate = parseBookingDate(booking.serviceDate)
-    if (!bookingDate) {
-      return counts
-    }
-
-    const key = monthKey(bookingDate)
-    counts[key] = (counts[key] ?? 0) + 1
-    return counts
-  }, {})
-  const monthlyCounts = months.map((month) => bookingCountsByMonth[month.key] ?? 0)
+// Graphique des reservations sur la periode d'analyse (par date de creation, comme les indicateurs).
+function BookingsChart({ bookings, period }: { bookings: Booking[]; period: AnalysisPeriod | null }) {
+  const { buckets: months, unit } = periodBuckets(period)
+  const monthlyCounts = months.map((bucket) => bookings.filter((booking) => {
+    const createdAt = new Date(booking.createdAt)
+    return createdAt >= bucket.start && createdAt < bucket.end
+  }).length)
+  const stepCount = Math.max(1, months.length - 1)
   const maxCount = Math.max(5, ...monthlyCounts)
   const chartWidth = 720
   const chartHeight = 310
@@ -133,7 +111,7 @@ function BookingsChart({ bookings }: { bookings: Booking[] }) {
   const plotWidth = chartWidth - padding.left - padding.right
   const plotHeight = chartHeight - padding.top - padding.bottom
   const points = monthlyCounts.map((value, index) => {
-    const x = padding.left + (plotWidth / 11) * index
+    const x = padding.left + (plotWidth / stepCount) * index
     const y = padding.top + plotHeight - (value / maxCount) * plotHeight
     return { x, y, value }
   })
@@ -143,30 +121,30 @@ function BookingsChart({ bookings }: { bookings: Booking[] }) {
   const totalMonthlyBookings = monthlyCounts.reduce((total, value) => total + value, 0)
   const pieRadius = 46
   const pieCircumference = 2 * Math.PI * pieRadius
-  let pieOffset = 0
+  const pieLength = (count: number) => (totalMonthlyBookings > 0 ? (count / totalMonthlyBookings) * pieCircumference : 0)
   const pieSegments = months.map((month, index) => {
     const value = monthlyCounts[index]
-    const length = totalMonthlyBookings > 0 ? (value / totalMonthlyBookings) * pieCircumference : 0
-    const segment = {
+    const length = pieLength(value)
+    // Chaque part commence la ou s'arretent les precedentes.
+    const offset = pieLength(monthlyCounts.slice(0, index).reduce((total, count) => total + count, 0))
+    return {
       color: pieColors[index % pieColors.length],
       dashArray: `${length} ${pieCircumference - length}`,
-      dashOffset: -pieOffset,
+      dashOffset: -offset,
       key: month.key,
       label: month.label,
       value,
     }
-    pieOffset += length
-    return segment
   }).filter((segment) => segment.value > 0)
 
   return (
     <section className="booking-chart-panel">
       <div className="booking-panel-header">
         <h2>Graphique des reservations</h2>
-        <span>Les 12 derniers mois</span>
+        <span>{unit}</span>
       </div>
       <div className="booking-pie-summary">
-        <svg className="booking-pie-chart" viewBox="0 0 120 120" role="img" aria-label="Diagramme circulaire des reservations sur les 12 derniers mois">
+        <svg className="booking-pie-chart" viewBox="0 0 120 120" role="img" aria-label={`Diagramme circulaire des reservations : ${unit}`}>
           <circle className="booking-pie-track" cx="60" cy="60" r={pieRadius} />
           {pieSegments.map((segment) => (
             <circle
@@ -199,7 +177,7 @@ function BookingsChart({ bookings }: { bookings: Booking[] }) {
           )}
         </div>
       </div>
-      <svg className="sales-chart" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Graphique des reservations sur les 12 derniers mois">
+      <svg className="sales-chart" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`Graphique des reservations : ${unit}`}>
         {ticks.map((tick, index) => {
           const y = padding.top + plotHeight - (tick / maxCount) * plotHeight
           return (
@@ -210,7 +188,7 @@ function BookingsChart({ bookings }: { bookings: Booking[] }) {
           )
         })}
         {months.map((month, index) => {
-          const x = padding.left + (plotWidth / 11) * index
+          const x = padding.left + (plotWidth / stepCount) * index
           return (
             <g key={month.key}>
               <line className="chart-month-line" x1={x} x2={x} y1={padding.top} y2={padding.top + plotHeight} />
@@ -255,37 +233,45 @@ function AdminRecentActivitiesPanel({
   bookings,
   providers,
   users,
+  period,
 }: {
   bookings: Booking[]
   providers: ProviderProfile[]
   users: User[]
+  period: AnalysisPeriod | null
 }) {
   const [showAll, setShowAll] = useState(false)
-  const bookingActivities: RecentActivity[] = bookings.map((booking) => ({
-    id: `booking-${booking.id}`,
-    title: 'Reservation creee',
-    body: `${booking.employerName} a demande ${booking.providerName}.`,
-    meta: `${bookingReference(booking.id)} - ${formatStatus(booking.status)}`,
-    timestamp: recentActivityDate(booking.createdAt),
-  }))
+  const range = period ? periodRange(period) : null
+  // Date d'inscription de chaque compte : sert aussi a dater les profils prestataires a verifier.
+  const registrationByUserId = new Map(users.map((account) => [account.id, account.createdAt]))
+  const bookingActivities: RecentActivity[] = bookings
+    .filter((booking) => isWithinPeriod(booking.createdAt, range))
+    .map((booking) => ({
+      id: `booking-${booking.id}`,
+      title: 'Reservation creee',
+      body: `${booking.employerName} a demande ${booking.providerName}.`,
+      meta: `${bookingReference(booking.id)} - ${formatStatus(booking.status)}`,
+      timestamp: recentActivityDate(booking.createdAt),
+    }))
   const providerActivities: RecentActivity[] = providers
     .filter((provider) => provider.status === 'PENDING')
+    .filter((provider) => isWithinPeriod(registrationByUserId.get(provider.userId), range))
     .map((provider) => ({
       id: `provider-${provider.id}`,
       title: 'Profil prestataire a verifier',
       body: `${provider.fullName} attend une validation de dossier.`,
       meta: provider.zone,
-      timestamp: 0,
+      timestamp: recentActivityDate(registrationByUserId.get(provider.userId) ?? ''),
     }))
   const userActivities: RecentActivity[] = users
     .filter((currentUser) => currentUser.role !== 'ADMIN')
-    .slice(0, 4)
+    .filter((currentUser) => isWithinPeriod(currentUser.createdAt, range))
     .map((currentUser) => ({
       id: `user-${currentUser.id}`,
       title: 'Compte utilisateur',
       body: `${currentUser.fullName} est inscrit comme ${displayRole(currentUser.role).toLowerCase()}.`,
       meta: currentUser.active ? 'Compte actif' : 'En attente',
-      timestamp: 0,
+      timestamp: recentActivityDate(currentUser.createdAt ?? ''),
     }))
   const activities = [...bookingActivities, ...providerActivities, ...userActivities]
     .sort((first, second) => second.timestamp - first.timestamp)
@@ -294,14 +280,19 @@ function AdminRecentActivitiesPanel({
   return (
     <section className="booking-notifications-panel">
       <div className="booking-panel-header">
-        <h2>Activites recentes</h2>
+        <div>
+          <h2>Activites recentes</h2>
+          <span>{range ? range.label : 'Depuis le debut'}</span>
+        </div>
         {activities.length > 6 && (
           <button className="soft-action" type="button" onClick={() => setShowAll((current) => !current)}>
             {showAll ? 'Reduire' : 'Afficher tout'}
           </button>
         )}
       </div>
-      {activities.length === 0 && <p className="empty-state">Aucune activite recente.</p>}
+      {activities.length === 0 && (
+        <p className="empty-state">{range ? `Aucune activite sur la periode (${range.label}).` : 'Aucune activite recente.'}</p>
+      )}
       <div className="booking-notification-list">
         {visibleActivities.map((activity) => (
           <article className="booking-notification" key={activity.id}>
@@ -395,16 +386,19 @@ export function DashboardOverview({
   bookings,
   providers,
   users,
+  period,
 }: {
   bookings: Booking[]
   providers: ProviderProfile[]
   users: User[]
+  // Periode d'analyse choisie dans la barre de filtres (null : sans filtre).
+  period: AnalysisPeriod | null
 }) {
   return (
     <div className="bookings-dashboard">
       <div className="booking-dashboard-grid">
-        <BookingsChart bookings={bookings} />
-        <AdminRecentActivitiesPanel bookings={bookings} providers={providers} users={users} />
+        <BookingsChart bookings={bookings} period={period} />
+        <AdminRecentActivitiesPanel bookings={bookings} providers={providers} users={users} period={period} />
       </div>
     </div>
   )
