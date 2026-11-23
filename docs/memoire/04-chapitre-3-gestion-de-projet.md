@@ -47,18 +47,18 @@ communication). Il est adapté aux projets d'envergure qui nécessitent un pilot
 
 ## 3.2 Méthode retenue et justification
 
-[À COMPLÉTER : confirmer la méthode réellement suivie par le groupe. La proposition ci-dessous s'appuie sur les
-pratiques observables dans le dépôt Git.]
-
-Nous avons retenu une **approche agile itérative, inspirée de Scrum pour le découpage en incréments et de
-Kanban pour le suivi du flux de tâches**. Ce choix se justifie par :
+Nous avons retenu la **méthode Agile**, appliquée de manière itérative et incrémentale : le produit est
+construit par petites livraisons fonctionnelles, chacune testée et intégrée avant la suivante, en
+s'inspirant de Scrum pour le découpage en incréments et de Kanban pour le suivi du flux de tâches. Ce choix
+se justifie par :
 
 - **Des besoins qui se sont précisés en cours de route.** Plusieurs exigences sont apparues au fil des
   essais de l'application : dépôt de la pièce d'identité en deux faces (recto et verso), photo de profil pour
   tous les utilisateurs, filtres par période dans le tableau de bord. Une méthode séquentielle aurait rendu
   ces ajustements coûteux.
-- **Une équipe réduite.** Le formalisme de Scrum complet (cérémonies, rôles dédiés) et celui du PMBOK auraient
-  été disproportionnés.
+- **Un projet mené individuellement.** Le formalisme de Scrum complet (cérémonies, rôles dédiés) et celui du
+  PMBOK auraient été disproportionnés ; l'agilité en conserve l'essentiel : itérations courtes, priorisation
+  et amélioration continue.
 - **Des livraisons fréquentes et vérifiées.** Chaque fonctionnalité est développée sur sa propre branche, puis
   fusionnée par une demande de fusion (*pull request*) uniquement lorsque le pipeline d'intégration continue
   est entièrement vert.
@@ -72,8 +72,19 @@ branche principale.
 
 ### 3.3.1 Répartition des tâches
 
-[À COMPLÉTER : membres du groupe et répartition réelle des tâches (analyse, backend, frontend, tests,
-déploiement, rédaction du mémoire).]
+Le projet étant individuel, Cheikhou Niass a assuré l'ensemble des rôles, en les enchaînant à chaque
+itération :
+
+| Rôle | Activités |
+|---|---|
+| Responsable produit | Recueil et priorisation des besoins, définition des règles de gestion |
+| Analyste et concepteur | Modélisation UML et modèle de données |
+| Développeur backend | API Spring Boot, base de données, sécurité |
+| Développeur frontend | Application React |
+| Ingénieur qualité et DevOps | Tests, conteneurisation, pipeline CI/CD, déploiement |
+| Rédacteur | Documentation et mémoire |
+
+Les points d'étape avec l'encadreur, M. Wane, ont servi de revues d'itération.
 
 ### 3.3.2 Planification et jalons
 
@@ -90,9 +101,6 @@ L'historique Git permet de reconstituer les principaux jalons du projet.
 | 19 novembre 2026 | Qualité et sécurité | Audit de sécurité et corrections, pipeline CI/CD obligatoire avant fusion (PR n° 1 à 3) |
 | 19 novembre 2026 | Dossier des utilisateurs | Photo de profil pour tous, pièce d'identité recto et verso (PR n° 4 et 5) |
 | 20 novembre 2026 | Administration | Menu d'actions, filtres par période du tableau de bord (PR n° 6 et 7) |
-
-[À COMPLÉTER : planning prévisionnel initial (sprints ou lots) et écarts constatés, si un planning avait été
-établi.]
 
 *Figure 1 : Chronologie du projet*
 
@@ -115,8 +123,8 @@ gantt
     Administration et tableau de bord     :d2, 2026-11-19, 2d
 ```
 
-> Note : la phase d'analyse et de conception précède le premier commit ; sa date de début est à confirmer.
-> [À COMPLÉTER : date réelle de démarrage du projet.]
+> Note : la phase d'analyse et de conception a précédé le premier commit ; sa durée est représentée à titre
+> indicatif.
 
 ### 3.3.3 Flux de travail Git
 
@@ -151,8 +159,7 @@ Le flux de travail suit les principes du *GitHub Flow* :
 | GitHub Actions | Intégration et livraison continues |
 | Visual Studio Code | Environnement de développement |
 | Claude Code (agents `developpeur`, `deployeur`, `redacteur-memoire`) | Assistance au développement, à l'audit de sécurité, au déploiement et à la rédaction, sous la supervision de l'étudiant |
-| [À COMPLÉTER : Trello, Notion, Jira…] | [À COMPLÉTER : suivi des tâches et du backlog, si utilisé] |
-| [À COMPLÉTER : WhatsApp, Google Meet…] | [À COMPLÉTER : communication de l'équipe] |
+| GitHub (demandes de fusion et historique) | Suivi des fonctionnalités livrées et revue de chaque incrément |
 
 ## Conclusion du chapitre
 

@@ -86,7 +86,7 @@ docker compose up --build -d --wait
 bash .github/scripts/smoke-test.sh http://localhost:8081 http://localhost:8080
 ```
 
-[À COMPLÉTER : captures de la commande `docker compose up` et des conteneurs « healthy ».]
+[Espace réservé : capture de la commande `docker compose up` et des conteneurs à l'état « healthy ».]
 
 ## 8.3 Mise en production de l'application
 
@@ -97,15 +97,57 @@ La mise en production est automatisée par le workflow GitHub Actions `deploy.ym
 2. s'il réussit, les images du backend et du web sont construites et publiées sur le registre de GitHub
    (`ghcr.io/<propriétaire>/jaakha-backend` et `ghcr.io/<propriétaire>/jaakha-web`), étiquetées avec
    l'identifiant du commit et le nom de l'environnement ;
-3. le déploiement est déclenché chez l'hébergeur par l'appel d'un *deploy hook*, dont l'adresse est stockée
-   comme secret de l'environnement GitHub (`staging` automatiquement, `production` sur lancement manuel,
-   avec validation possible).
+3. le serveur de production récupère ces images et redémarre les conteneurs (étape décrite ci-dessous).
 
-[À COMPLÉTER : hébergeur retenu (Render, Railway, VPS…) et sa configuration ; adresse publique de
-l'application ; captures du déploiement.]
+### 8.3.1 Hébergement retenu : un VPS LWS
 
-*Figure 19 : Exécution du pipeline sur GitHub Actions* — [À COMPLÉTER : capture de l'onglet *Actions* montrant
-les contrôles « Backend », « Web », « Docker » et « CI OK » au vert.]
+L'application est hébergée sur l'offre **VPS M de l'hébergeur LWS** : 4 vCore, 8 Go de mémoire, 150 Go de
+stockage SSD NVMe et accès root (budget de 60 000 FCFA par an, voir chapitre 5). Le choix d'un VPS plutôt que d'un hébergement mutualisé est imposé par l'architecture : un
+hébergement mutualisé classique est prévu pour des sites PHP et ne permet ni d'exécuter une application
+Java ni d'utiliser Docker. Le VPS, lui, fournit un système Linux complet sur lequel la solution s'exécute
+exactement comme en développement et en intégration continue.
+
+**Préparation du VPS :**
+
+```bash
+# 1. Connexion au serveur et mise à jour du système
+ssh <utilisateur>@<adresse-du-vps>
+sudo apt update && sudo apt upgrade -y
+
+# 2. Installation de Docker et de Docker Compose
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+
+# 3. Pare-feu : seuls SSH, HTTP et HTTPS sont ouverts
+sudo ufw allow OpenSSH && sudo ufw allow 80 && sudo ufw allow 443 && sudo ufw enable
+
+# 4. Récupération du projet et configuration
+git clone https://github.com/niassecheikhou/Jaakha.git jaankha && cd jaankha
+cp .env.example .env    # mots de passe forts, serveur SMTP, APP_FRONTEND_URL=https://<domaine>
+docker compose up --build -d --wait
+```
+
+**Exposition sécurisée :** un reverse proxy (Nginx ou Caddy) placé devant le conteneur web termine le HTTPS
+avec un certificat **Let's Encrypt** gratuit et redirige le trafic HTTP vers HTTPS. Les ports 8080 (API) et
+5432 (base) ne sont pas exposés publiquement : seul le conteneur web est joignable, et il relaie lui-même les
+appels vers l'API.
+
+**Mises à jour :** à chaque nouvelle version validée par le pipeline, le serveur récupère les images publiées
+et redémarre les conteneurs, sans perte de données grâce aux volumes persistants :
+
+```bash
+cd jaankha && git pull && docker compose up --build -d --wait
+```
+
+Cette étape peut être automatisée en ajoutant au workflow `deploy.yml` une connexion SSH vers le VPS ; le
+workflow actuel prévoit un déclenchement par *deploy hook*, mécanisme propre aux plateformes de type Render
+ou Railway, qu'il faudra remplacer par cette étape SSH pour le VPS LWS.
+
+[Espace réservé : capture de l'espace client LWS et de l'application en ligne.]
+
+[Espace réservé : capture d'écran]
+
+*Figure 19 : Exécution du pipeline sur GitHub Actions*
 
 **Points de vigilance pour la production :**
 
@@ -130,11 +172,22 @@ recommandée.
 
 Les sauvegardes doivent être conservées hors du serveur et testées régulièrement par une restauration
 d'essai. Les archives contenant des pièces d'identité sont des données personnelles : elles doivent être
-chiffrées et leur accès restreint. [À COMPLÉTER : outil d'automatisation retenu (tâche planifiée `cron`,
-service de sauvegarde de l'hébergeur) et durée de conservation.]
+chiffrées et leur accès restreint.
+
+Sur le VPS, ces commandes sont regroupées dans un script exécuté chaque nuit par une tâche planifiée
+`cron`, par exemple à 2 h du matin, avec une conservation de 30 jours :
+
+```bash
+# crontab -e
+0 2 * * * /home/<utilisateur>/jaankha/sauvegarde.sh >> /var/log/jaankha-sauvegarde.log 2>&1
+```
+
+Les archives produites sont ensuite copiées hors du VPS (espace de stockage distant ou poste
+d'administration), afin de rester disponibles en cas de perte du serveur.
 
 ## Conclusion du chapitre
 
 Grâce à la conteneurisation et à l'automatisation du pipeline, la solution s'installe avec une seule
-commande, et chaque mise en production est précédée d'une vérification complète. Il reste à choisir
-l'hébergeur de production et à automatiser les sauvegardes.
+commande, et chaque mise en production est précédée d'une vérification complète. Le VPS LWS accueille la
+solution dans les mêmes conditions qu'en développement, protégée par HTTPS et par des sauvegardes
+quotidiennes.

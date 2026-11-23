@@ -58,7 +58,7 @@ flowchart LR
 
 Un lot supplémentaire de 14 tests (`EmailValidationTest`) vérifie le refus des adresses email incomplètes
 (par exemple `nom@gm`) sur l'inscription, la création de compte par l'administrateur et le formulaire de
-contact. [À COMPLÉTER : mettre à jour le total une fois la branche `fix/validation-email` fusionnée.]
+contact. À la date de rédaction, ce lot est en attente de fusion sur la branche principale.
 
 Exemple de test unitaire :
 
@@ -92,14 +92,23 @@ void providerCannotJumpFromRequestedToDone() {
 
 ## 7.3 Validation des fonctionnalités
 
-[À COMPLÉTER : tableau de recette manuelle, une ligne par besoin fonctionnel du chapitre 2 (BF01 à BF17),
-avec le scénario joué, le résultat obtenu et la date. Exemple de format ci-dessous.]
+Chaque besoin fonctionnel est rattaché au moyen qui le vérifie.
 
-| Réf. | Scénario | Résultat attendu | Résultat obtenu |
-|---|---|---|---|
-| BF05 | Un employeur sélectionne deux images, inverse recto et verso, puis envoie | Les deux faces sont enregistrées dans le bon ordre, la photo de profil n'est pas modifiée | [À COMPLÉTER] |
-| BF10 | L'administrateur tente de passer une réservation de *Demandée* à *Terminée* | L'action est grisée ; l'API répond 409 | [À COMPLÉTER] |
-| BF16 | L'administrateur sélectionne « Trimestre » | Les quatre indicateurs, le graphique et les activités se limitent au trimestre en cours | [À COMPLÉTER] |
+| Réf. | Fonctionnalité | Moyen de vérification |
+|---|---|---|
+| BF01, BF02 | Inscription et connexion | Test de fumée (inscription 201, lecture du dossier avec le jeton) |
+| BF03 | Réinitialisation du mot de passe | Démonstration manuelle (lien reçu par email) |
+| BF04 | Photo de profil | `AccountProfileControllerTest`, test de fumée (dépôt puis lecture de l'image) |
+| BF05 | Pièce d'identité recto et verso | `AccountProfileControllerTest`, `AccountProfileServiceTest`, test de fumée |
+| BF06 | Dossier (zone, compétences, tuteur) | `AccountProfileServiceTest`, `ProviderServiceTest` |
+| BF07, BF08 | Recherche et profil public | Test de fumée (recherche publique 200) |
+| BF09, BF10 | Réservation et cycle de vie | `BookingStatusPolicyTest`, `BookingServiceTest` |
+| BF11 | Avis | Contrainte d'unicité en base et contrôle du statut *Terminée* |
+| BF12 | Notifications | Démonstration manuelle |
+| BF13, BF14 | Création, validation et archivage des comptes | `AdminServiceTest`, démonstration manuelle (import CSV) |
+| BF15 | Validation des profils prestataires | Démonstration manuelle |
+| BF16 | Indicateurs par période | Vérification du calcul des périodes et démonstration manuelle |
+| BF17 | Messages de contact | Démonstration manuelle (envoi et export) |
 
 ## 7.4 Résultats obtenus et corrections apportées
 

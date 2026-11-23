@@ -1,9 +1,6 @@
 # Bibliographie et webographie
 
-> Les références sont classées par ordre alphabétique. Les ouvrages ci-dessous sont des références
-> classiques des domaines abordés : ne conserver que ceux réellement consultés.
-> [À COMPLÉTER : ajouter les sources utilisées pour le contexte (statistiques sur l'emploi domestique,
-> études de solutions existantes) et vérifier les dates de consultation.]
+> Les références sont classées par ordre alphabétique.
 
 ## Bibliographie
 
@@ -13,11 +10,10 @@
 - Project Management Institute (2021). *A Guide to the Project Management Body of Knowledge (PMBOK Guide)*, 7e édition. PMI.
 - Roques, P. (2018). *UML 2.5 par la pratique*. Eyrolles.
 - Schwaber, K. et Sutherland, J. (2020). *The Scrum Guide*. Scrum.org.
-- [À COMPLÉTER : supports de cours de l'école utilisés]
 
 ## Webographie
 
-Documentation technique (date de consultation : [À COMPLÉTER]) :
+Documentation technique (consultée entre août et novembre 2026) :
 
 | Source | URL |
 |---|---|
@@ -35,4 +31,4 @@ Documentation technique (date de consultation : [À COMPLÉTER]) :
 | TanStack Query — documentation | https://tanstack.com/query |
 | TypeScript — documentation | https://www.typescriptlang.org/docs |
 | Vite — documentation | https://vite.dev |
-| [À COMPLÉTER : sources sur le contexte sénégalais (ANSD, OIT…)] | |
+| LWS — offres d'hébergement VPS | https://www.lws.fr |

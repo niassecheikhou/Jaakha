@@ -19,9 +19,9 @@ sécurité (chapitre 7), puis conteneurisation et chaîne d'intégration et de l
 (chapitre 8). Chaque évolution a été livrée sur une branche dédiée et fusionnée uniquement après le passage
 complet du pipeline de tests.
 
-## Apports techniques pour chaque membre du groupe
+## Apports techniques
 
-[À COMPLÉTER : pour chaque membre, les compétences acquises ou consolidées. Pistes issues du projet :]
+Ce projet, mené individuellement, m'a permis d'acquérir ou de consolider les compétences suivantes :
 
 - conception d'une API REST sécurisée avec Spring Boot et organisation du code en couches ;
 - développement d'une application monopage en React et TypeScript strict ;
@@ -32,11 +32,14 @@ complet du pipeline de tests.
 - conteneurisation avec Docker et mise en place d'un pipeline CI/CD avec GitHub Actions ;
 - travail collaboratif avec Git : branches, demandes de fusion, protection de branche.
 
-## Atouts du projet pour les membres
+## Atouts du projet
 
-[À COMPLÉTER : ce que le projet apporte personnellement et professionnellement à chaque membre — un projet
-complet à présenter en entretien, l'expérience d'un problème réel, la confrontation à des incidents concrets
-(fusion défectueuse, droits des volumes Docker, failles de sécurité) et leur résolution méthodique.]
+Au-delà des compétences techniques, JAANKHA constitue un projet complet, de l'analyse au déploiement, qui
+répond à un problème réel et peut être présenté en entretien professionnel. Il m'a confronté à des incidents
+concrets — une fusion défectueuse, des droits d'accès aux volumes Docker, des failles de sécurité — et à leur
+résolution méthodique : reproduire, comprendre la cause, corriger, puis ajouter un test qui empêche le
+problème de revenir. Enfin, le modèle économique prévu (chapitre 5) ouvre la voie à une exploitation réelle
+de la plateforme.
 
 ## Limites
 
@@ -65,10 +68,11 @@ Plusieurs limites, identifiées honnêtement au cours de l'audit, restent à lev
 **À moyen terme :**
 
 - application mobile Expo connectée à la même API, pour les prestataires qui utilisent surtout un téléphone ;
-- paiement en ligne via les solutions de paiement mobile utilisées au Sénégal ;
+- paiement en ligne de l'abonnement via les solutions de paiement mobile utilisées au Sénégal, et gestion de
+  la période gratuite de 6 mois, prérequis au modèle économique prévu (chapitre 5) ;
 - contrat de prestation généré automatiquement à partir de la réservation ;
 - vérification automatisée des pièces d'identité ;
-- mise en production chez un hébergeur, avec HTTPS, supervision et sauvegardes automatisées.
+- mise en production sur le VPS LWS, avec HTTPS, supervision et sauvegardes automatisées.
 
 JAANKHA constitue ainsi une base solide et sécurisée, sur laquelle ces évolutions peuvent être construites
 sans remettre en cause l'architecture.

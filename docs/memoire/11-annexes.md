@@ -14,10 +14,7 @@
 
 ## Annexe 1 : Captures d'écran de l'application
 
-[À COMPLÉTER : captures complémentaires non reprises dans le chapitre 6, par exemple : connexion,
-mot de passe oublié, détail d'un prestataire avec ses avis, espace employeur et historique des
-réservations, notifications, fiche détaillée d'un compte avec la pièce d'identité recto et verso, import
-CSV, messages de contact, version mobile de l'interface.]
+[Espace réservé : captures complémentaires (connexion, mot de passe oublié, détail d'un prestataire, espace employeur, notifications, fiche d'un compte avec la CNI, import CSV, messages de contact, affichage mobile)]
 
 ---
 
@@ -98,4 +95,4 @@ Colonnes attendues : nom complet, email, téléphone, mot de passe par défaut, 
 mot de passe, rôle) et les erreurs sont signalées ligne par ligne. Les comptes créés reçoivent un email
 contenant un lien pour choisir leur mot de passe.
 
-[À COMPLÉTER : capture du fichier modèle ouvert dans un tableur.]
+[Espace réservé : capture du fichier modèle ouvert dans un tableur.]

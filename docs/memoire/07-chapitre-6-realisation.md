@@ -152,19 +152,29 @@ L'espace administrateur regroupe :
 La validation d'un compte est refusée tant que le dossier est incomplet, avec la liste des champs manquants
 (règle RG01).
 
-[À COMPLÉTER : insérer les captures d'écran des figures 11 à 16.]
+[Espace réservé : capture d'écran]
 
-*Figure 11 : Page d'accueil* — [À COMPLÉTER : capture]
+*Figure 11 : Page d'accueil*
 
-*Figure 12 : Formulaire d'inscription* — [À COMPLÉTER : capture]
+[Espace réservé : capture d'écran]
 
-*Figure 13 : Dossier prestataire (photo de profil et pièce d'identité)* — [À COMPLÉTER : capture]
+*Figure 12 : Formulaire d'inscription*
 
-*Figure 14 : Recherche de prestataires* — [À COMPLÉTER : capture]
+[Espace réservé : capture d'écran]
 
-*Figure 15 : Tableau de bord administrateur avec filtre par période* — [À COMPLÉTER : capture]
+*Figure 13 : Dossier prestataire (photo de profil et pièce d'identité)*
 
-*Figure 16 : Gestion des réservations et menu d'actions* — [À COMPLÉTER : capture]
+[Espace réservé : capture d'écran]
+
+*Figure 14 : Recherche de prestataires*
+
+[Espace réservé : capture d'écran]
+
+*Figure 15 : Tableau de bord administrateur avec filtre par période*
+
+[Espace réservé : capture d'écran]
+
+*Figure 16 : Gestion des réservations et menu d'actions*
 
 ## 6.3 Organisation du code et interactions entre les composants
 

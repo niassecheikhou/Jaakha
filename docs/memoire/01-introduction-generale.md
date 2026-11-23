@@ -7,9 +7,6 @@ importante dans la vie des ménages sénégalais, en particulier en milieu urbai
 représentent à la fois un besoin quotidien pour de nombreuses familles et une source de revenus essentielle
 pour les personnes qui les exercent.
 
-[À COMPLÉTER : chiffres et source officielle sur l'emploi domestique au Sénégal, par exemple une publication
-de l'ANSD ou de l'OIT, pour appuyer ce constat.]
-
 Pourtant, la mise en relation entre les familles et les prestataires reste largement informelle : bouche-à-
 oreille, recommandations de voisins, intermédiaires non déclarés. Ce fonctionnement ne fournit aucune
 garantie vérifiable, ni sur l'identité de la personne recrutée, ni sur les conditions de la mission. Dans un
@@ -26,7 +23,6 @@ Nous avons retenu ce sujet pour trois raisons :
 
 1. **Un problème réel et proche de nous.** Le manque de confiance entre employeurs et prestataires de
    services domestiques est une difficulté concrète, que l'on retrouve dans de nombreuses familles.
-   [À COMPLÉTER : expérience personnelle ou témoignages recueillis par le groupe, le cas échéant.]
 2. **Un terrain d'application complet pour le génie logiciel.** Le sujet mobilise toutes les étapes du cycle
    de développement : analyse des besoins de plusieurs types d'utilisateurs, modélisation, développement
    d'une API et d'une interface, sécurité des données personnelles, tests et déploiement.

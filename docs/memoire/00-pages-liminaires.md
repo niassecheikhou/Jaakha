@@ -6,10 +6,9 @@
 
 > Mise en page : une page seule, centrée, avec les logos en haut.
 
-[À COMPLÉTER : logo de l'établissement] [À COMPLÉTER : logo du projet — le dépôt contient `web/src/assets` (logo JAANKHA)]
+[Espace réservé : logo de l'Ecole 221] [Logo du projet JAANKHA]
 
-**[À COMPLÉTER : nom complet de l'Université]**
-**[À COMPLÉTER : nom complet de l'École]**
+**ECOLE 221**
 
 Mémoire de fin de cycle pour l'obtention de la **Licence en Génie Logiciel**
 
@@ -21,11 +20,11 @@ Mémoire de fin de cycle pour l'obtention de la **Licence en Génie Logiciel**
 
 ---
 
-**Présenté par :** [À COMPLÉTER : prénoms et noms des étudiants]
+**Présenté par :** Cheikhou NIASS
 
-**Sous l'encadrement de :** [À COMPLÉTER : prénom, nom et titre du coach / encadreur]
+**Sous l'encadrement de :** M. WANE
 
-**Année académique :** [À COMPLÉTER : ex. 2025-2026]
+**Année académique :** 2025-2026
 
 ---
 
@@ -33,8 +32,7 @@ Mémoire de fin de cycle pour l'obtention de la **Licence en Génie Logiciel**
 
 > Maximum une page.
 
-[À COMPLÉTER : remerciements personnels — encadreur, enseignants de l'école, famille, camarades,
-personnes ayant testé la plateforme ou partagé leur expérience d'employeur ou de prestataire.]
+[Espace réservé : remerciements, à rédiger par l'auteur.]
 
 ---
 
@@ -42,7 +40,7 @@ personnes ayant testé la plateforme ou partagé leur expérience d'employeur ou
 
 > Maximum une page, texte personnel.
 
-[À COMPLÉTER : dédicace.]
+[Espace réservé : dédicace, à rédiger par l'auteur.]
 
 ---
 
@@ -50,15 +48,7 @@ personnes ayant testé la plateforme ou partagé leur expérience d'employeur ou
 
 > Maximum une page.
 
-[À COMPLÉTER : présentation de l'établissement — historique, mission, filières (Génie Logiciel ; Réseaux et
-Systèmes ; Concepteur et Développeur de Solutions Digitales), objectifs de formation et rôle dans la
-préparation des étudiants au monde professionnel.]
-
-Le présent mémoire s'inscrit dans le cadre du projet de fin de cycle de la Licence en Génie Logiciel. Ce
-projet a pour vocation de mettre l'étudiant en situation professionnelle : partir d'un problème réel, en
-analyser les besoins, concevoir une solution, la développer, la tester puis la déployer, en mobilisant les
-méthodes et outils de l'ingénierie logicielle. Le projet JAANKHA, plateforme de mise en relation sécurisée
-entre employeurs et prestataires de services domestiques, constitue l'aboutissement de ce parcours.
+[Espace réservé : préambule — présentation de l'Ecole 221 et du cadre du projet de fin de cycle, à rédiger par l'auteur.]
 
 ---
 
@@ -161,10 +151,10 @@ services domestiques ?**
 
 Pour y répondre, nous avons conçu et réalisé **JAANKHA**, une plateforme web composée d'une API REST
 développée avec Spring Boot (Java 21), d'une interface React en TypeScript et d'une base de données
-PostgreSQL, le tout conteneurisé avec Docker. La démarche a suivi les phases du cycle de développement :
-analyse des besoins, conception UML, réalisation, tests et déploiement, avec un pilotage par branches de
-fonctionnalités et un pipeline d'intégration continue qui bloque toute fusion tant que les tests ne sont pas
-au vert.
+PostgreSQL, le tout conteneurisé avec Docker. La démarche, pilotée selon une méthode agile, a suivi les phases
+du cycle de développement : analyse des besoins, conception UML, réalisation, tests et déploiement, avec des
+livraisons par branches de fonctionnalités et un pipeline d'intégration continue qui bloque toute fusion
+tant que les tests ne sont pas au vert.
 
 La confiance est construite par des mécanismes concrets : vérification des dossiers par un administrateur
 (photo, pièce d'identité recto et verso, informations du tuteur pour les prestataires), stockage privé des
@@ -187,9 +177,10 @@ and security in matching employers with domestic service providers?**
 
 To answer it, we designed and built **JAANKHA**, a web platform made of a REST API developed with Spring
 Boot (Java 21), a React user interface written in TypeScript and a PostgreSQL database, all containerised
-with Docker. The work followed the phases of the development life cycle: requirements analysis, UML design,
-implementation, testing and deployment, driven by feature branches and a continuous integration pipeline
-that blocks any merge until the tests pass.
+with Docker. The work, managed with an agile method, followed the phases of the
+development life cycle: requirements analysis, UML design, implementation, testing and deployment, with
+deliveries through feature branches and a continuous integration pipeline that blocks any merge until the
+tests pass.
 
 Trust is built through concrete mechanisms: profile verification by an administrator (photo, front and back
 of the national identity card, guardian details for providers), private storage of identity documents, a

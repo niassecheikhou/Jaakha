@@ -28,7 +28,8 @@ automatiquement lors de la mise en page finale (Word : *Références > Table des
 
 - Tout le contenu technique est tiré du code réel du dépôt (branche `main` au 20 novembre 2026).
   Aucune fonctionnalité non implémentée n'est présentée comme réalisée ; les limites sont signalées.
-- `[À COMPLÉTER : ...]` signale une information que seul l'étudiant (ou le groupe) peut fournir.
+- `[Espace réservé : ...]` signale un contenu que l'auteur ajoutera lui-même dans le document final
+  (remerciements, dédicace, préambule, logo de l'école, captures d'écran).
 - Les diagrammes sont écrits en **Mermaid** dans les chapitres et **exportés en images PNG** dans
   [`figures/`](figures/) (figures 1 à 10, 17 et 18), à insérer dans le document final comme le demande le
   canevas (« fournir les captures »). Après toute modification d'un diagramme, réexporter l'image
@@ -36,12 +37,16 @@ automatiquement lors de la mise en page finale (Word : *Références > Table des
 - Les figures 11 à 16 et 19 sont des captures d'écran de l'application à réaliser par l'étudiant.
 - Numérotation : *Tableau n* et *Figure n* continues sur tout le mémoire.
 
-## Éléments à fournir par l'étudiant (récapitulatif)
+## Informations du projet
 
-- Page de garde : université, école, spécialité, noms des étudiants, encadreur, année académique, logos.
-- Remerciements, dédicace, préambule (présentation de l'école).
-- Composition du groupe et répartition réelle des tâches (chapitre 3).
-- Méthode de gestion de projet effectivement suivie et outils de suivi utilisés (chapitre 3).
-- Montants du budget (chapitre 5).
-- Captures d'écran de l'application (chapitres 6, 8 et annexes).
-- Hébergeur retenu pour la mise en production (chapitre 8).
+- Auteur : Cheikhou Niass — Ecole 221 — Encadreur : M. Wane — Année académique 2025-2026.
+- Méthode de gestion : Agile. Hébergement : VPS M LWS (5,99 € TTC/mois, budget de 60 000 FCFA par an).
+- Modèle économique : gratuit les 6 premiers mois, puis abonnement annuel de 2 000 FCFA par utilisateur
+  (hors administrateurs).
+
+## Espaces réservés à remplir par l'auteur
+
+- Remerciements, dédicace et préambule (pages liminaires).
+- Logo de l'Ecole 221 (page de garde).
+- Captures d'écran : figures 11 à 16 (chapitre 6), figure 19 et captures de déploiement (chapitre 8),
+  annexes 1 et 5.
