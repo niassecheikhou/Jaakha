@@ -82,8 +82,9 @@ function pngSize(file) {
   const buffer = fs.readFileSync(file)
   return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20), buffer }
 }
-// Diagrammes larges (séquences, MCD, chronologie, déploiement) : page en paysage pour rester lisibles.
-const LANDSCAPE_FIGURES = new Set([1, 5, 6, 7, 9, 18])
+// Toutes les pages sont en A4 portrait (choix de l'auteur) : aucun diagramme n'est placé en paysage.
+// Pour passer un diagramme large en paysage, ajouter son numéro ici (ex. new Set([5, 6, 7])).
+const LANDSCAPE_FIGURES = new Set([])
 
 function figureImage(number, landscape = false, maxLandscapeHeight = 540) {
   const file = fs.readdirSync(FIG_DIR).find((name) => name.startsWith(`figure-${String(number).padStart(2, '0')}-`))
