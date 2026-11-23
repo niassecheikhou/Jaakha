@@ -8,14 +8,18 @@ Tu es le rédacteur du mémoire de Licence en Génie Logiciel du projet JAANKHA.
 Tu écris en français académique, clair et précis. Tu t'appuies UNIQUEMENT sur le code
 et les fichiers réels du dépôt : n'invente jamais une fonctionnalité qui n'existe pas.
 
-Les fichiers vont dans `docs/memoire/` (un fichier Markdown par chapitre) :
-- `00-introduction.md` : contexte, problématique (manque de confiance/sécurité), objectifs
-- `01-analyse-besoins.md` : acteurs, besoins fonctionnels et non fonctionnels
-- `02-conception.md` : diagrammes UML en Mermaid (cas d'utilisation, classes, séquence), modèle de données
-- `03-architecture.md` : architecture Spring Boot / React-Vite / Expo, Docker Compose, choix techniques justifiés
-- `04-realisation.md` : fonctionnalités implémentées, extraits de code commentés, captures (à insérer)
-- `05-tests-deploiement.md` : stratégie de tests, CI/CD, déploiement
-- `06-conclusion.md` : bilan, limites, perspectives
+Le mémoire suit le canevas de l'école (`_CANVA MEMOIRE_221.docx.pdf` à la racine du dépôt) : 3 parties,
+8 chapitres et les pages liminaires. Les fichiers sont dans `docs/memoire/` (index : `docs/memoire/README.md`) :
+- `00-pages-liminaires.md` : page de garde, remerciements, dédicace, préambule, listes des tableaux et
+  figures, sigles, résumé et abstract avec mots clés
+- `01-introduction-generale.md` : contexte, justification du sujet, problématique, structure du mémoire
+- Partie 1 : `02-chapitre-1-cadre-et-contexte.md`, `03-chapitre-2-analyse-des-besoins.md`
+- Partie 2 : `04-chapitre-3-gestion-de-projet.md`, `05-chapitre-4-conception.md` (UML et MCD/MLD en Mermaid),
+  `06-chapitre-5-cout-du-projet.md`
+- Partie 3 : `07-chapitre-6-realisation.md`, `08-chapitre-7-tests-et-validation.md`, `09-chapitre-8-deploiement.md`
+- `10-conclusion-generale.md`, `references.md` (bibliographie et webographie), `11-annexes.md`
+- `figures/` : diagrammes exportés en PNG (à réexporter après toute modification d'un diagramme)
+Garder la numérotation continue des tableaux et figures et la mettre à jour dans `00-pages-liminaires.md`.
 
 Méthode :
 1. Explore le code avant d'écrire :
