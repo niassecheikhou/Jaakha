@@ -54,6 +54,7 @@ class AdminServiceTest {
     void employerWithoutIdentityBackCannotBeValidated() {
         UUID id = UUID.randomUUID();
         when(userAccountRepository.findById(id)).thenReturn(Optional.of(employer(id, "/front", null)));
+        when(userAccountRepository.findCreatedBy(id)).thenReturn(Optional.of(ADMIN.id()));
 
         assertThatThrownBy(() -> adminService.updateUserActive(ADMIN, id, true))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -66,6 +67,7 @@ class AdminServiceTest {
     void employerWithoutIdentityFrontCannotBeValidated() {
         UUID id = UUID.randomUUID();
         when(userAccountRepository.findById(id)).thenReturn(Optional.of(employer(id, null, "/back")));
+        when(userAccountRepository.findCreatedBy(id)).thenReturn(Optional.of(ADMIN.id()));
 
         assertThatThrownBy(() -> adminService.updateUserActive(ADMIN, id, true))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -77,6 +79,7 @@ class AdminServiceTest {
         UUID id = UUID.randomUUID();
         UserResponse complete = employer(id, "/front", "/back");
         when(userAccountRepository.findById(id)).thenReturn(Optional.of(complete));
+        when(userAccountRepository.findCreatedBy(id)).thenReturn(Optional.of(ADMIN.id()));
 
         adminService.updateUserActive(ADMIN, id, true);
 
@@ -160,16 +163,62 @@ class AdminServiceTest {
     }
 
     @Test
-    void adminDoesNotSeeAdministrationAccounts() {
+    void adminSeesOnlyTheAccountsHeCreated() {
+        when(userAccountRepository.findAllCreatedBy(ADMIN.id())).thenReturn(List.of(
+                account(UUID.randomUUID(), "EMPLOYEUR", null, null),
+                account(UUID.randomUUID(), "PRESTATAIRE", null, null)
+        ));
         when(userAccountRepository.findAll()).thenReturn(List.of(
                 account(UUID.randomUUID(), "SUPER_ADMIN", null, null),
                 account(UUID.randomUUID(), "ADMIN", null, null),
+                account(UUID.randomUUID(), "EMPLOYEUR", null, null),
                 account(UUID.randomUUID(), "EMPLOYEUR", null, null),
                 account(UUID.randomUUID(), "PRESTATAIRE", null, null)
         ));
 
         assertThat(adminService.users(ADMIN)).extracting(UserResponse::role).containsExactly("EMPLOYEUR", "PRESTATAIRE");
-        assertThat(adminService.users(SUPER_ADMIN)).hasSize(4);
+        assertThat(adminService.users(SUPER_ADMIN)).hasSize(5);
+    }
+
+    @Test
+    void adminCannotManageAccountCreatedByAnotherAdmin() {
+        UUID id = UUID.randomUUID();
+        when(userAccountRepository.findById(id)).thenReturn(Optional.of(employer(id, "/front", "/back")));
+        when(userAccountRepository.findCreatedBy(id)).thenReturn(Optional.of(UUID.randomUUID()));
+
+        assertThatThrownBy(() -> adminService.updateUserActive(ADMIN, id, true))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("que tu as crees");
+        assertThatThrownBy(() -> adminService.assertCanViewUser(ADMIN, id))
+                .isInstanceOf(ForbiddenException.class);
+        verify(userAccountRepository, never()).updateActive(any(), anyBoolean());
+    }
+
+    @Test
+    void adminCannotManageSelfRegisteredAccount() {
+        UUID id = UUID.randomUUID();
+        when(userAccountRepository.findById(id)).thenReturn(Optional.of(employer(id, "/front", "/back")));
+        when(userAccountRepository.findCreatedBy(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> adminService.updateUserArchived(ADMIN, id, true))
+                .isInstanceOf(ForbiddenException.class);
+        // Le super administrateur gere tous les comptes, y compris les inscriptions libres.
+        adminService.updateUserArchived(SUPER_ADMIN, id, true);
+        verify(userAccountRepository).updateArchived(id, true);
+    }
+
+    @Test
+    void adminSeesOnlyBookingsOfHisAccountsAndCannotUpdateOthers() {
+        UUID bookingId = UUID.randomUUID();
+        when(bookingAdminRepository.findAllManagedBy(ADMIN.id(), null)).thenReturn(List.of());
+        when(bookingAdminRepository.findStatus(bookingId)).thenReturn(Optional.of("REQUESTED"));
+        when(bookingAdminRepository.isManagedBy(bookingId, ADMIN.id())).thenReturn(false);
+
+        assertThat(adminService.bookings(ADMIN, null)).isEmpty();
+        assertThatThrownBy(() -> adminService.updateBookingStatus(ADMIN, bookingId, "ACCEPTED"))
+                .isInstanceOf(ForbiddenException.class);
+        verify(bookingAdminRepository, never()).findAll(any());
+        verify(bookingAdminRepository, never()).updateStatus(any(), any(), any());
     }
 
     @Test

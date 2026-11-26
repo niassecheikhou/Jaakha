@@ -35,7 +35,7 @@ public class ContactController {
 
     @GetMapping("/api/admin/contact-messages")
     public List<ContactMessageResponse> messages(HttpServletRequest request) {
-        currentUserService.requireAdmin(request);
+        currentUserService.requireSuperAdmin(request);
         return contactMessageService.findAll();
     }
 
@@ -44,7 +44,7 @@ public class ContactController {
             HttpServletRequest request,
             @RequestParam(defaultValue = "csv") String format
     ) {
-        currentUserService.requireAdmin(request);
+        currentUserService.requireSuperAdmin(request);
         boolean excel = "excel".equalsIgnoreCase(format) || "xls".equalsIgnoreCase(format);
         byte[] content = excel ? contactMessageService.exportExcel() : contactMessageService.exportCsv();
         String filename = excel ? "messages-contact-jaankha.xls" : "messages-contact-jaankha.csv";

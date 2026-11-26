@@ -35,6 +35,31 @@ public class UserAccountRepository {
         );
     }
 
+    /** Comptes crees par cet administrateur (perimetre d'un ADMIN). */
+    public List<UserResponse> findAllCreatedBy(UUID creatorId) {
+        return jdbcTemplate.query("""
+                        select u.id, u.full_name, u.email, u.phone, u.role, u.email_verified,
+                               u.active, u.archived, u.created_at, p.photo_url, p.identity_photo_url, p.identity_photo_back_url,
+                               p.bio, p.zone, p.monthly_rate, p.experience_years,
+                               p.skills, p.guardian_full_name, p.guardian_phone, p.address
+                        from app_user u
+                        left join account_profile p on p.owner_key = cast(u.id as varchar)
+                        where u.created_by = ?
+                        order by u.created_at desc
+                        """,
+                (resultSet, rowNumber) -> mapUser(resultSet),
+                creatorId
+        );
+    }
+
+    public Set<UUID> findIdsCreatedBy(UUID creatorId) {
+        return new LinkedHashSet<>(jdbcTemplate.query(
+                "select id from app_user where created_by = ?",
+                (resultSet, rowNumber) -> resultSet.getObject("id", UUID.class),
+                creatorId
+        ));
+    }
+
     public Optional<UserResponse> findById(UUID id) {
         List<UserResponse> users = jdbcTemplate.query("""
                         select u.id, u.full_name, u.email, u.phone, u.role, u.email_verified,

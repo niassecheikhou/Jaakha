@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -52,15 +53,14 @@ public class AdminService {
 
     /**
      * Le super administrateur voit tous les comptes ; un administrateur ne voit que les employeurs
-     * et les prestataires (les comptes d'administration ne le concernent pas).
+     * et les prestataires qu'il a lui-meme crees.
      */
     @Transactional(readOnly = true)
     public List<UserResponse> users(AuthenticatedUser actor) {
-        List<UserResponse> users = userAccountRepository.findAll();
         if (Roles.isSuperAdmin(actor.role())) {
-            return users;
+            return userAccountRepository.findAll();
         }
-        return users.stream()
+        return userAccountRepository.findAllCreatedBy(actor.id()).stream()
                 .filter(user -> !Roles.isAdministration(user.role()))
                 .toList();
     }
@@ -97,12 +97,18 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProviderProfileResponse> providers(String status) {
+    public List<ProviderProfileResponse> providers(AuthenticatedUser actor, String status) {
         List<ProviderProfile> profiles;
         if (status == null || status.isBlank()) {
             profiles = providerProfileRepository.findAll();
         } else {
             profiles = providerProfileRepository.findByStatusOrderByCreatedAtDesc(ProviderStatus.valueOf(status));
+        }
+        if (!Roles.isSuperAdmin(actor.role())) {
+            Set<UUID> managedUserIds = userAccountRepository.findIdsCreatedBy(actor.id());
+            profiles = profiles.stream()
+                    .filter(profile -> managedUserIds.contains(profile.getUserId()))
+                    .toList();
         }
         return profiles.stream()
                 .map(ProviderProfileResponse::from)
@@ -110,9 +116,10 @@ public class AdminService {
     }
 
     @Transactional
-    public ProviderProfileResponse updateProviderStatus(UUID id, String status) {
+    public ProviderProfileResponse updateProviderStatus(AuthenticatedUser actor, UUID id, String status) {
         ProviderProfile profile = providerProfileRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Le profil prestataire est introuvable."));
+        assertManagesUser(actor, profile.getUserId());
         profile.setStatus(ProviderStatus.valueOf(status));
         return ProviderProfileResponse.from(providerProfileRepository.save(profile));
     }
@@ -141,15 +148,21 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
-    public List<BookingResponse> bookings(String status) {
-        return bookingAdminRepository.findAll(status);
+    public List<BookingResponse> bookings(AuthenticatedUser actor, String status) {
+        if (Roles.isSuperAdmin(actor.role())) {
+            return bookingAdminRepository.findAll(status);
+        }
+        return bookingAdminRepository.findAllManagedBy(actor.id(), status);
     }
 
     @Transactional
-    public BookingResponse updateBookingStatus(UUID id, String status) {
+    public BookingResponse updateBookingStatus(AuthenticatedUser actor, UUID id, String status) {
         String targetStatus = BookingStatusPolicy.normalize(status);
         String currentStatus = bookingAdminRepository.findStatus(id)
                 .orElseThrow(() -> new IllegalArgumentException("La reservation est introuvable."));
+        if (!Roles.isSuperAdmin(actor.role()) && !bookingAdminRepository.isManagedBy(id, actor.id())) {
+            throw new ForbiddenException("Cette reservation ne concerne aucun des comptes que tu as crees.");
+        }
         BookingStatusPolicy.assertTransition("ADMIN", currentStatus, targetStatus);
         BookingResponse booking = bookingAdminRepository.updateStatus(id, currentStatus, targetStatus);
         notificationService.notifyParticipantsAboutBookingStatus(booking);
@@ -161,7 +174,8 @@ public class AdminService {
      * - un compte SUPER_ADMIN n'est jamais modifiable depuis le dashboard ;
      * - un compte ADMIN n'est modifiable que par le super administrateur qui l'a cree
      *   (ou par tout super administrateur s'il a ete cree avant l'arrivee de ce role) ;
-     * - les comptes EMPLOYEUR et PRESTATAIRE sont geres par tout administrateur.
+     * - un compte EMPLOYEUR ou PRESTATAIRE est gere par l'administrateur qui l'a cree
+     *   (et par le super administrateur, qui gere tous les comptes).
      */
     private UserResponse findEditableUser(AuthenticatedUser actor, UUID id) {
         UserResponse user = userAccountRepository.findById(id)
@@ -179,8 +193,40 @@ public class AdminService {
             if (createdByAnotherSuperAdmin) {
                 throw new ForbiddenException("Tu ne peux gerer que les administrateurs que tu as crees.");
             }
+            return user;
         }
+        assertManagesUser(actor, id);
         return user;
+    }
+
+    /**
+     * Verifie qu'un administrateur peut consulter le compte (fiche, piece d'identite).
+     * Le super administrateur a acces a tous les comptes.
+     */
+    @Transactional(readOnly = true)
+    public void assertCanViewUser(AuthenticatedUser actor, UUID userId) {
+        if (Roles.isSuperAdmin(actor.role())) {
+            return;
+        }
+        UserResponse user = userAccountRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Le compte utilisateur est introuvable."));
+        if (Roles.isAdministration(user.role())) {
+            throw new ForbiddenException("Seul le super administrateur peut consulter un compte d'administration.");
+        }
+        assertManagesUser(actor, userId);
+    }
+
+    /** Un ADMIN ne gere que les comptes qu'il a crees ; le super administrateur gere tout. */
+    private void assertManagesUser(AuthenticatedUser actor, UUID userId) {
+        if (Roles.isSuperAdmin(actor.role())) {
+            return;
+        }
+        boolean createdByActor = userAccountRepository.findCreatedBy(userId)
+                .map(creator -> creator.equals(actor.id()))
+                .orElse(false);
+        if (!createdByActor) {
+            throw new ForbiddenException("Tu ne peux gerer que les comptes que tu as crees.");
+        }
     }
 
     private void assertProfileReadyForValidation(UserResponse user) {

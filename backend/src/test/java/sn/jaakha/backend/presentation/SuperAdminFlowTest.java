@@ -101,6 +101,15 @@ class SuperAdminFlowTest {
                         .content(createBody("Employeur Flow", "flow-employer@jaankha.test", "+221770000012", "EMPLOYEUR")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("EMPLOYEUR"));
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody("Employeur Inscrit", "flow-self@jaankha.test", "+221770000014", "EMPLOYEUR")))
+                .andExpect(status().isCreated());
+        String selfId = jdbcTemplate.queryForObject("select cast(id as varchar) from app_user where email = 'flow-self@jaankha.test'", String.class);
+        mockMvc.perform(patch("/api/admin/users/" + selfId + "/archive").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"archived\":true}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/admin/users/" + selfId + "/identity-photo").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isForbidden());
         mockMvc.perform(post("/api/admin/users").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody("Admin Pirate", "flow-other@jaankha.test", "+221770000013", "ADMIN")))
@@ -130,7 +139,17 @@ class SuperAdminFlowTest {
         // Il ne voit pas les comptes d'administration et ne peut pas les modifier.
         mockMvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.role == 'ADMIN' || @.role == 'SUPER_ADMIN')]").isEmpty());
+                .andExpect(jsonPath("$[?(@.role == 'ADMIN' || @.role == 'SUPER_ADMIN')]").isEmpty())
+                // Seuls les comptes qu'il a crees : pas l'employeur inscrit librement.
+                .andExpect(jsonPath("$[*].email").value(org.hamcrest.Matchers.contains("flow-employer@jaankha.test")));
+        mockMvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + superToken))
+                .andExpect(jsonPath("$[*].email").value(org.hamcrest.Matchers.hasItem("flow-self@jaankha.test")));
+
+        // Les messages de contact sont reserves au super administrateur.
+        mockMvc.perform(get("/api/admin/contact-messages").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/admin/contact-messages").header("Authorization", "Bearer " + superToken))
+                .andExpect(status().isOk());
         mockMvc.perform(patch("/api/admin/users/" + adminId + "/archive").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"archived\":true}"))
                 .andExpect(status().isForbidden());

@@ -44,7 +44,12 @@ export function AdminDashboard() {
   const usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: adminApi.users, refetchInterval: 10_000 })
   const providersQuery = useQuery({ queryKey: ['admin', 'providers'], queryFn: () => adminApi.providers() })
   const bookingsQuery = useQuery({ queryKey: ['admin', 'bookings'], queryFn: () => adminApi.bookings() })
-  const contactMessagesQuery = useQuery({ queryKey: ['admin', 'contact-messages'], queryFn: adminApi.contactMessages })
+  // Messages de contact : reserves au super administrateur (l'API les refuse aux administrateurs).
+  const contactMessagesQuery = useQuery({
+    queryKey: ['admin', 'contact-messages'],
+    queryFn: adminApi.contactMessages,
+    enabled: isSuperAdminRole(user?.role),
+  })
 
   const providerStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; providerName: string; status: ProviderStatus }) => adminApi.updateProviderStatus(id, status),
@@ -171,14 +176,16 @@ export function AdminDashboard() {
       badge: pendingBookings.length.toLocaleString('fr-FR'),
     },
     ...(isSuperAdmin
-      ? [{ id: 'history' as const, label: 'Historique des actions', icon: <HistoryIcon /> }]
+      ? [
+          { id: 'history' as const, label: 'Historique des actions', icon: <HistoryIcon /> },
+          {
+            id: 'contact' as const,
+            label: 'Messages contact',
+            icon: <MailIcon />,
+            badge: contactMessages.length.toLocaleString('fr-FR'),
+          },
+        ]
       : []),
-    {
-      id: 'contact',
-      label: 'Messages contact',
-      icon: <MailIcon />,
-      badge: contactMessages.length.toLocaleString('fr-FR'),
-    },
     {
       id: 'profile',
       label: 'Mon profil',
@@ -239,8 +246,9 @@ export function AdminDashboard() {
           )}
           <section className="panel span-2">
             <h2>Gestion des comptes</h2>
+            {!isSuperAdmin && <p className="muted">Tu geres uniquement les comptes que tu as crees, leurs profils et leurs reservations.</p>}
             {manageableUsers.length === 0 ? (
-              <p className="empty-state">Aucun compte employeur ou prestataire pour le moment.</p>
+              <p className="empty-state">{isSuperAdmin ? 'Aucun compte employeur ou prestataire pour le moment.' : "Aucun compte cree par toi pour le moment : les comptes que tu ajoutes apparaitront ici."}</p>
             ) : (
               <AccountsTable
                 loading={userStatusMutation.isPending || userArchiveMutation.isPending}
@@ -272,7 +280,7 @@ export function AdminDashboard() {
           <AdminAuditLog users={usersQuery.data ?? []} />
         </div>
       )}
-      {activeMenu === 'contact' && (
+      {activeMenu === 'contact' && isSuperAdmin && (
         <div className="dashboard-grid">
           <AdminContactMessages
             exporting={exportContactMessagesMutation.isPending}

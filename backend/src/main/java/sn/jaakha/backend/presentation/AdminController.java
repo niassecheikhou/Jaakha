@@ -56,13 +56,13 @@ public class AdminController {
 
     @GetMapping("/users/{id}/identity-photo")
     public ResponseEntity<Resource> userIdentityPhoto(HttpServletRequest request, @PathVariable UUID id) {
-        currentUserService.requireAdmin(request);
+        adminService.assertCanViewUser(currentUserService.requireAdmin(request), id);
         return AccountProfileController.privateImage(accountProfileService.identityPhoto(id.toString(), IdentityDocumentSide.FRONT));
     }
 
     @GetMapping("/users/{id}/identity-photo/back")
     public ResponseEntity<Resource> userIdentityPhotoBack(HttpServletRequest request, @PathVariable UUID id) {
-        currentUserService.requireAdmin(request);
+        adminService.assertCanViewUser(currentUserService.requireAdmin(request), id);
         return AccountProfileController.privateImage(accountProfileService.identityPhoto(id.toString(), IdentityDocumentSide.BACK));
     }
 
@@ -122,8 +122,7 @@ public class AdminController {
 
     @GetMapping("/providers")
     public List<ProviderProfileResponse> providers(HttpServletRequest request, @RequestParam(required = false) String status) {
-        currentUserService.requireAdmin(request);
-        return adminService.providers(status);
+        return adminService.providers(currentUserService.requireAdmin(request), status);
     }
 
     @PatchMapping("/providers/{id}/status")
@@ -133,7 +132,7 @@ public class AdminController {
             @Valid @RequestBody StatusUpdateRequest request
     ) {
         AuthenticatedUser actor = currentUserService.requireAdmin(httpRequest);
-        ProviderProfileResponse profile = adminService.updateProviderStatus(id, request.status());
+        ProviderProfileResponse profile = adminService.updateProviderStatus(actor, id, request.status());
         auditLogService.record(actor, AuditLogService.PROVIDER_STATUS_CHANGED, "PROFIL_PRESTATAIRE", profile.id(), profile.fullName(),
                 "APPROVED".equals(request.status()) ? "Profil valide" : "Nouveau statut : " + request.status());
         return profile;
@@ -141,8 +140,7 @@ public class AdminController {
 
     @GetMapping("/bookings")
     public List<BookingResponse> bookings(HttpServletRequest request, @RequestParam(required = false) String status) {
-        currentUserService.requireAdmin(request);
-        return adminService.bookings(status);
+        return adminService.bookings(currentUserService.requireAdmin(request), status);
     }
 
     @PatchMapping("/bookings/{id}/status")
@@ -152,7 +150,7 @@ public class AdminController {
             @Valid @RequestBody StatusUpdateRequest request
     ) {
         AuthenticatedUser actor = currentUserService.requireAdmin(httpRequest);
-        BookingResponse booking = adminService.updateBookingStatus(id, request.status());
+        BookingResponse booking = adminService.updateBookingStatus(actor, id, request.status());
         auditLogService.record(actor, AuditLogService.BOOKING_STATUS_CHANGED, "RESERVATION", booking.id(),
                 booking.employerName() + " / " + booking.providerName(), "Nouveau statut : " + AuditLogService.bookingStatusLabel(booking.status()));
         return booking;
