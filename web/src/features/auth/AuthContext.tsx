@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -20,6 +21,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState(() => getStoredToken())
   const [user, setUser] = useState<User | null>(() => getStoredUser())
   const navigate = useNavigate()
+
+  // Au chargement, relit le compte connecte : le role stocke dans le navigateur peut etre perime
+  // (ex. compte promu super administrateur). Une session expiree (401) deconnecte l'utilisateur.
+  useEffect(() => {
+    if (!getStoredToken()) {
+      return
+    }
+    let cancelled = false
+    authApi.me()
+      .then((freshUser) => {
+        if (cancelled) {
+          return
+        }
+        const storedToken = getStoredToken()
+        if (storedToken) {
+          storeAuth(storedToken, freshUser)
+          setUser(freshUser)
+        } else {
+          setToken(null)
+          setUser(null)
+        }
+      })
+      .catch(() => {
+        if (!cancelled && !getStoredToken()) {
+          setToken(null)
+          setUser(null)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const login = useCallback(async (payload: LoginPayload) => {
     const response = await authApi.login(payload)

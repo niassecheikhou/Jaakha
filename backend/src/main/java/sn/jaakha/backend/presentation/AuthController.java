@@ -1,7 +1,11 @@
 package sn.jaakha.backend.presentation;
 
+import jakarta.servlet.http.HttpServletRequest;
+import sn.jaakha.backend.application.CurrentUserService;
+import sn.jaakha.backend.application.dto.UserResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,9 +23,17 @@ import sn.jaakha.backend.application.dto.ResetPasswordRequest;
 @RequestMapping("/api/auth")
 public class AuthController {
     private final AuthService authService;
+    private final CurrentUserService currentUserService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, CurrentUserService currentUserService) {
         this.authService = authService;
+        this.currentUserService = currentUserService;
+    }
+
+    /** Compte connecte, relu en base : permet au front de connaitre le role a jour (ex. promotion SUPER_ADMIN). */
+    @GetMapping("/me")
+    public UserResponse me(HttpServletRequest request) {
+        return authService.currentUser(currentUserService.requireUser(request).id());
     }
 
     @PostMapping("/login")

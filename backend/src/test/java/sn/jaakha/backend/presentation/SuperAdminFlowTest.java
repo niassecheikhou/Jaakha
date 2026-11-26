@@ -52,6 +52,10 @@ class SuperAdminFlowTest {
                         """,
                 UUID.randomUUID(), passwordEncoder.encode(PASSWORD));
         String superToken = login("flow-super@jaankha.test");
+        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + superToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("SUPER_ADMIN"));
+        mockMvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
 
         String adminJson = mockMvc.perform(post("/api/admin/users").header("Authorization", "Bearer " + superToken)
                         .contentType(MediaType.APPLICATION_JSON)

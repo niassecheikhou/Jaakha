@@ -104,6 +104,11 @@ export const authApi = {
     storeAuth(data.token, data.user)
     return data
   },
+  // Compte connecte relu cote serveur (role et informations a jour).
+  async me() {
+    const { data } = await api.get<User>('/auth/me')
+    return data
+  },
   async forgotPassword(payload: ForgotPasswordPayload) {
     const { data } = await api.post<MessageResponse>('/auth/forgot-password', payload)
     return data
