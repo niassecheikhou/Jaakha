@@ -45,6 +45,9 @@ export function displayRole(role: User['role']) {
   if (role === 'PRESTATAIRE') {
     return 'Prestataire'
   }
+  if (role === 'SUPER_ADMIN') {
+    return 'Super administrateur'
+  }
   return 'Administrateur'
 }
 

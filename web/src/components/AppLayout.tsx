@@ -5,6 +5,7 @@ import footerLogoJaankha from '../assets/logofond.png'
 import logoJaankha from '../assets/logojaankha.png'
 import { useAuth } from '../hooks/use-auth'
 import { getApiError, notificationsApi } from '../services/api'
+import { isAdministrationRole } from '../utils/roles'
 import { useToast } from './toast-context'
 
 export function AppLayout() {
@@ -45,7 +46,7 @@ export function AppLayout() {
           <NavLink to="/contact" onClick={closeMobileMenu}>Contact</NavLink>
           {user?.role === 'EMPLOYEUR' && <NavLink to="/employer" onClick={closeMobileMenu}>Mes reservations</NavLink>}
           {user?.role === 'PRESTATAIRE' && <NavLink to="/provider" onClick={closeMobileMenu}>Espace prestataire</NavLink>}
-          {user?.role === 'ADMIN' && <NavLink to="/admin" onClick={closeMobileMenu}>Admin</NavLink>}
+          {isAdministrationRole(user?.role) && <NavLink to="/admin" onClick={closeMobileMenu}>Admin</NavLink>}
         </nav>
         <div className="session">
           {user ? (

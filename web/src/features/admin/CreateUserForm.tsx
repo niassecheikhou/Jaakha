@@ -3,13 +3,16 @@ import { FormError } from '../../components/FormError'
 import { PasswordInput } from '../../components/PasswordInput'
 import { useToast } from '../../components/toast-context'
 import { getApiError } from '../../services/api'
-import type { AdminCreateUserPayload, Role, User } from '../../types/api'
+import type { AdminCreateUserPayload, CreatableRole, User } from '../../types/api'
 import { displayRole } from './admin-utils'
 
+// allowAdmin : le super administrateur peut aussi creer des comptes administrateur.
 export function CreateUserForm({
+  allowAdmin = false,
   loading,
   onCreate,
 }: {
+  allowAdmin?: boolean
   loading: boolean
   onCreate: (payload: AdminCreateUserPayload) => Promise<User>
 }) {
@@ -17,7 +20,7 @@ export function CreateUserForm({
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('+22177')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<Exclude<Role, 'ADMIN'>>('EMPLOYEUR')
+  const [role, setRole] = useState<CreatableRole>('EMPLOYEUR')
   const [error, setError] = useState({ message: '', fields: {} })
   const [successMessage, setSuccessMessage] = useState('')
   const toast = useToast()
@@ -75,9 +78,10 @@ export function CreateUserForm({
       </label>
       <label>
         Role
-        <select value={role} onChange={(event) => setRole(event.target.value as Exclude<Role, 'ADMIN'>)}>
+        <select value={role} onChange={(event) => setRole(event.target.value as CreatableRole)}>
           <option value="EMPLOYEUR">Employeur</option>
           <option value="PRESTATAIRE">Prestataire</option>
+          {allowAdmin && <option value="ADMIN">Administrateur</option>}
         </select>
       </label>
       <button className="button primary" disabled={loading} type="submit">

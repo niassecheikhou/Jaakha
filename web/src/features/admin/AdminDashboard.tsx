@@ -28,6 +28,7 @@ import { CsvUsersImport } from './CsvUsersImport'
 import { bookingReference } from './admin-booking-utils'
 import type { AdminMenu } from './admin-types'
 import { countPendingProfileApprovals } from './admin-utils'
+import { isAdministrationRole, isSuperAdminRole } from '../../utils/roles'
 
 export function AdminDashboard() {
   const { user } = useAuth()
@@ -114,7 +115,10 @@ export function AdminDashboard() {
     onError: (caughtError) => toast.error('Export impossible', getApiError(caughtError).message),
   })
 
+  const isSuperAdmin = isSuperAdminRole(user?.role)
   const manageableUsers = usersQuery.data?.filter((currentUser) => currentUser.role === 'EMPLOYEUR' || currentUser.role === 'PRESTATAIRE') ?? []
+  // Comptes d'administration : renvoyes par l'API uniquement au super administrateur.
+  const administrationUsers = usersQuery.data?.filter((currentUser) => isAdministrationRole(currentUser.role)) ?? []
   const providers = providersQuery.data ?? []
   const bookings = bookingsQuery.data ?? []
   const pendingBookings = bookings.filter((booking) => booking.status === 'REQUESTED')
@@ -127,14 +131,17 @@ export function AdminDashboard() {
     const allUsers = usersQuery.data ?? []
     const allBookings = bookingsQuery.data ?? []
     const allProviders = providersQuery.data ?? []
-    const usersInPeriod = allUsers.filter((account) => isWithinPeriod(account.createdAt, range))
+    // Seuls les employeurs et prestataires sont comptes : le chiffre est le meme pour un admin et le super admin.
+    const usersInPeriod = allUsers
+      .filter((account) => !isAdministrationRole(account.role))
+      .filter((account) => isWithinPeriod(account.createdAt, range))
     const userIdsInPeriod = new Set(usersInPeriod.map((account) => account.id))
     const bookingsInPeriod = allBookings.filter((booking) => isWithinPeriod(booking.createdAt, range))
     return {
       caption: range ? range.label : 'Depuis le début',
       users: usersInPeriod.length,
       pendingProfiles: countPendingProfileApprovals(
-        usersInPeriod.filter((account) => account.role === 'EMPLOYEUR' || account.role === 'PRESTATAIRE'),
+        usersInPeriod,
         // Un profil prestataire est rattache a la periode d'inscription de son compte.
         allProviders.filter((provider) => userIdsInPeriod.has(provider.userId)),
       ),
@@ -203,9 +210,27 @@ export function AdminDashboard() {
         <div className="dashboard-grid">
           <section className="panel span-2">
             <h2>Creer un compte</h2>
-            <CreateUserForm loading={createUserMutation.isPending} onCreate={(payload) => createUserMutation.mutateAsync(payload)} />
+            <CreateUserForm allowAdmin={isSuperAdmin} loading={createUserMutation.isPending} onCreate={(payload) => createUserMutation.mutateAsync(payload)} />
             <CsvUsersImport loading={createUserMutation.isPending} onCreate={(payload) => createUserMutation.mutateAsync(payload)} />
           </section>
+          {isSuperAdmin && (
+            <section className="panel span-2">
+              <h2>Administrateurs</h2>
+              <p className="muted">Comptes administrateur que tu as crees : tu peux les desactiver, les reactiver ou les archiver.</p>
+              {administrationUsers.length === 0 ? (
+                <p className="empty-state">Aucun compte administrateur pour le moment.</p>
+              ) : (
+                <AccountsTable
+                  canManageAdmins
+                  loading={userStatusMutation.isPending || userArchiveMutation.isPending}
+                  users={administrationUsers}
+                  onToggle={(selectedAccount, active) => userStatusMutation.mutate({ id: selectedAccount.id, active, userName: selectedAccount.fullName })}
+                  onArchive={(selectedAccount, archived) => userArchiveMutation.mutate({ id: selectedAccount.id, archived, userName: selectedAccount.fullName })}
+                  onInspect={setSelectedUser}
+                />
+              )}
+            </section>
+          )}
           <section className="panel span-2">
             <h2>Gestion des comptes</h2>
             {manageableUsers.length === 0 ? (

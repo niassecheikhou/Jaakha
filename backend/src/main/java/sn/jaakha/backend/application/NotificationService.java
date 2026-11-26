@@ -58,7 +58,7 @@ public class NotificationService {
         List<UUID> adminIds = jdbcTemplate.query("""
                         select id
                         from app_user
-                        where role = 'ADMIN'
+                        where role in ('ADMIN', 'SUPER_ADMIN')
                           and active = true
                           and archived = false
                         """,

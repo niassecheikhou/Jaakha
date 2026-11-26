@@ -1847,6 +1847,16 @@ textarea:focus {
   background: #dff7ed;
 }
 
+.role-admin {
+  color: #7a4b00;
+  background: #fff1d6;
+}
+
+.role-super_admin {
+  color: #5b1f8a;
+  background: #f1e6fb;
+}
+
 @media (max-width: 860px) {
   .admin-table-wrapper {
     overflow-x: auto;

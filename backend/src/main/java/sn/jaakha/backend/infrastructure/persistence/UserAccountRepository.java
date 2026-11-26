@@ -60,12 +60,26 @@ public class UserAccountRepository {
             String role,
             boolean active
     ) {
+        create(id, fullName, email, phone, passwordHash, role, active, null);
+    }
+
+    /** Cree un compte en memorisant l'administrateur qui l'a cree (null pour une inscription). */
+    public void create(
+            UUID id,
+            String fullName,
+            String email,
+            String phone,
+            String passwordHash,
+            String role,
+            boolean active,
+            UUID createdBy
+    ) {
         jdbcTemplate.update("""
                         insert into app_user (
                             id, full_name, email, phone, password_hash, role,
-                            email_verified, active, archived, created_at, updated_at
+                            email_verified, active, archived, created_by, created_at, updated_at
                         )
-                        values (?, ?, ?, ?, ?, ?, false, ?, false, current_timestamp, current_timestamp)
+                        values (?, ?, ?, ?, ?, ?, false, ?, false, ?, current_timestamp, current_timestamp)
                         """,
                 id,
                 fullName,
@@ -73,8 +87,17 @@ public class UserAccountRepository {
                 phone,
                 passwordHash,
                 role,
-                active
+                active,
+                createdBy
         );
+    }
+
+    public Optional<UUID> findCreatedBy(UUID id) {
+        return jdbcTemplate.query(
+                "select created_by from app_user where id = ?",
+                (resultSet, rowNumber) -> Optional.ofNullable(resultSet.getObject("created_by", UUID.class)),
+                id
+        ).stream().findFirst().flatMap(value -> value);
     }
 
     public void updateActive(UUID id, boolean active) {

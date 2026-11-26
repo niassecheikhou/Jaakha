@@ -1,6 +1,9 @@
 package sn.jaakha.backend.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.never;
@@ -16,13 +19,19 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import sn.jaakha.backend.application.dto.AdminCreateUserRequest;
+import sn.jaakha.backend.application.dto.AuthenticatedUser;
 import sn.jaakha.backend.application.dto.UserResponse;
 import sn.jaakha.backend.domain.repository.ProviderProfileRepository;
 import sn.jaakha.backend.infrastructure.persistence.BookingAdminRepository;
 import sn.jaakha.backend.infrastructure.persistence.UserAccountRepository;
+import sn.jaakha.backend.presentation.ForbiddenException;
 
 @ExtendWith(MockitoExtension.class)
 class AdminServiceTest {
+    private static final AuthenticatedUser ADMIN = new AuthenticatedUser(UUID.randomUUID(), "Admin", "ADMIN");
+    private static final AuthenticatedUser SUPER_ADMIN = new AuthenticatedUser(UUID.randomUUID(), "Super Admin", "SUPER_ADMIN");
+
     @Mock
     private BookingAdminRepository bookingAdminRepository;
     @Mock
@@ -46,7 +55,7 @@ class AdminServiceTest {
         UUID id = UUID.randomUUID();
         when(userAccountRepository.findById(id)).thenReturn(Optional.of(employer(id, "/front", null)));
 
-        assertThatThrownBy(() -> adminService.updateUserActive(id, true))
+        assertThatThrownBy(() -> adminService.updateUserActive(ADMIN, id, true))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("verso de la piece d'identite")
                 .hasMessageNotContaining("recto");
@@ -58,7 +67,7 @@ class AdminServiceTest {
         UUID id = UUID.randomUUID();
         when(userAccountRepository.findById(id)).thenReturn(Optional.of(employer(id, null, "/back")));
 
-        assertThatThrownBy(() -> adminService.updateUserActive(id, true))
+        assertThatThrownBy(() -> adminService.updateUserActive(ADMIN, id, true))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("recto de la piece d'identite");
     }
@@ -69,9 +78,112 @@ class AdminServiceTest {
         UserResponse complete = employer(id, "/front", "/back");
         when(userAccountRepository.findById(id)).thenReturn(Optional.of(complete));
 
-        adminService.updateUserActive(id, true);
+        adminService.updateUserActive(ADMIN, id, true);
 
         verify(userAccountRepository).updateActive(id, true);
+    }
+
+    @Test
+    void adminCannotCreateAnAdminAccount() {
+        assertThatThrownBy(() -> adminService.createUser(ADMIN, createRequest("ADMIN")))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("super administrateur");
+        verify(userAccountRepository, never()).create(any(), any(), any(), any(), any(), any(), anyBoolean(), any());
+    }
+
+    @Test
+    void superAdminCreatesAnActiveAdminAccountLinkedToHim() {
+        when(passwordEncoder.encode(anyString())).thenReturn("hash");
+        when(userAccountRepository.findById(any())).thenAnswer(invocation ->
+                Optional.of(account(invocation.getArgument(0), "ADMIN", null, null)));
+
+        adminService.createUser(SUPER_ADMIN, createRequest("ADMIN"));
+
+        verify(userAccountRepository).create(any(), any(), any(), any(), eq("hash"), eq("ADMIN"), eq(true), eq(SUPER_ADMIN.id()));
+    }
+
+    @Test
+    void adminCreatesInactiveEmployerAccountLinkedToHim() {
+        when(passwordEncoder.encode(anyString())).thenReturn("hash");
+        when(userAccountRepository.findById(any())).thenAnswer(invocation ->
+                Optional.of(account(invocation.getArgument(0), "EMPLOYEUR", null, null)));
+
+        adminService.createUser(ADMIN, createRequest("EMPLOYEUR"));
+
+        verify(userAccountRepository).create(any(), any(), any(), any(), eq("hash"), eq("EMPLOYEUR"), eq(false), eq(ADMIN.id()));
+    }
+
+    @Test
+    void adminCannotManageAnotherAdminAccount() {
+        UUID id = UUID.randomUUID();
+        when(userAccountRepository.findById(id)).thenReturn(Optional.of(account(id, "ADMIN", null, null)));
+
+        assertThatThrownBy(() -> adminService.updateUserArchived(ADMIN, id, true))
+                .isInstanceOf(ForbiddenException.class);
+        verify(userAccountRepository, never()).updateArchived(any(), anyBoolean());
+    }
+
+    @Test
+    void superAdminManagesTheAdminsHeCreated() {
+        UUID id = UUID.randomUUID();
+        when(userAccountRepository.findById(id)).thenReturn(Optional.of(account(id, "ADMIN", null, null)));
+        when(userAccountRepository.findCreatedBy(id)).thenReturn(Optional.of(SUPER_ADMIN.id()));
+
+        adminService.updateUserArchived(SUPER_ADMIN, id, true);
+        // Aucun dossier (photo, CNI...) n'est exige pour reactiver un administrateur.
+        adminService.updateUserActive(SUPER_ADMIN, id, true);
+
+        verify(userAccountRepository).updateArchived(id, true);
+        verify(userAccountRepository).updateActive(id, true);
+    }
+
+    @Test
+    void superAdminCannotManageAdminCreatedByAnotherSuperAdmin() {
+        UUID id = UUID.randomUUID();
+        when(userAccountRepository.findById(id)).thenReturn(Optional.of(account(id, "ADMIN", null, null)));
+        when(userAccountRepository.findCreatedBy(id)).thenReturn(Optional.of(UUID.randomUUID()));
+
+        assertThatThrownBy(() -> adminService.updateUserActive(SUPER_ADMIN, id, false))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("que tu as crees");
+        verify(userAccountRepository, never()).updateActive(any(), anyBoolean());
+    }
+
+    @Test
+    void superAdminAccountIsNeverEditable() {
+        UUID id = UUID.randomUUID();
+        when(userAccountRepository.findById(id)).thenReturn(Optional.of(account(id, "SUPER_ADMIN", null, null)));
+
+        assertThatThrownBy(() -> adminService.updateUserArchived(SUPER_ADMIN, id, true))
+                .isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> adminService.updateUserActive(ADMIN, id, false))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void adminDoesNotSeeAdministrationAccounts() {
+        when(userAccountRepository.findAll()).thenReturn(List.of(
+                account(UUID.randomUUID(), "SUPER_ADMIN", null, null),
+                account(UUID.randomUUID(), "ADMIN", null, null),
+                account(UUID.randomUUID(), "EMPLOYEUR", null, null),
+                account(UUID.randomUUID(), "PRESTATAIRE", null, null)
+        ));
+
+        assertThat(adminService.users(ADMIN)).extracting(UserResponse::role).containsExactly("EMPLOYEUR", "PRESTATAIRE");
+        assertThat(adminService.users(SUPER_ADMIN)).hasSize(4);
+    }
+
+    private AdminCreateUserRequest createRequest(String role) {
+        return new AdminCreateUserRequest("Nouveau Compte", "nouveau@jaankha.test", "+221771234567", "Secret1!", role);
+    }
+
+    private UserResponse account(UUID id, String role, String identityFront, String identityBack) {
+        return new UserResponse(
+                id, "Compte " + role, "compte@jaankha.test", "+221771234567", role,
+                false, false, false,
+                null, identityFront, identityBack,
+                null, null, null, 0, List.of(), null, null, "2026-11-01T10:00:00Z"
+        );
     }
 
     private UserResponse employer(UUID id, String identityFront, String identityBack) {

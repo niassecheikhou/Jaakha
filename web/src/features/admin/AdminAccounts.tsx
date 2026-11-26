@@ -3,6 +3,7 @@ import { ActionsMenu, type ActionsMenuItem } from '../../components/ActionsMenu'
 import { ProtectedImage } from '../../components/ProtectedImage'
 import type { User } from '../../types/api'
 import { formatPrice } from '../../utils/format'
+import { isAdministrationRole } from '../../utils/roles'
 import { ArchiveIcon, CheckIcon, EyeIcon, RestoreIcon, XIcon } from './AdminIcons'
 import { displayRole, initials, isProfileComplete } from './admin-utils'
 
@@ -30,6 +31,8 @@ export function UserDetailPanel({
   onClose: () => void
 }) {
   const isProvider = user.role === 'PRESTATAIRE'
+  // Un compte d'administration n'a ni piece d'identite ni dossier a faire valider.
+  const isAdministration = isAdministrationRole(user.role)
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -72,14 +75,14 @@ export function UserDetailPanel({
             <span>Photo du profil</span>
             {user.photoUrl ? <img src={user.photoUrl} alt={`Photo de ${user.fullName}`} /> : <strong>Non renseignee</strong>}
           </div>
-          <div className="identity-document">
+          {!isAdministration && <div className="identity-document">
             <span>CNI recto{user.identityPhotoUrl ? ' (cliquer pour agrandir)' : ''}</span>
             {user.identityPhotoUrl ? <ProtectedImage src={user.identityPhotoUrl} alt={`Recto de la piece d'identite de ${user.fullName}`} zoomable /> : <strong>Non renseigne</strong>}
-          </div>
-          <div className="identity-document">
+          </div>}
+          {!isAdministration && <div className="identity-document">
             <span>CNI verso{user.identityPhotoBackUrl ? ' (cliquer pour agrandir)' : ''}</span>
             {user.identityPhotoBackUrl ? <ProtectedImage src={user.identityPhotoBackUrl} alt={`Verso de la piece d'identite de ${user.fullName}`} zoomable /> : <strong>Non renseigne</strong>}
-          </div>
+          </div>}
         </div>
         <dl className="user-detail-grid">
           <div><dt>Nom complet</dt><dd>{user.fullName || 'Non renseigne'}</dd></div>
@@ -96,7 +99,7 @@ export function UserDetailPanel({
             </>
           )}
         </dl>
-        <ProfileCompletionBadge user={user} />
+        {!isAdministration && <ProfileCompletionBadge user={user} />}
       </section>
     </div>
   )
@@ -124,14 +127,22 @@ function accountActions(
   return items
 }
 
+// Un compte super administrateur est toujours protege ; un compte administrateur n'est
+// gerable que par le super administrateur (canManageAdmins).
+function isProtectedAccount(user: User, canManageAdmins: boolean) {
+  return user.role === 'SUPER_ADMIN' || (user.role === 'ADMIN' && !canManageAdmins)
+}
+
 export function AccountsTable({
   users,
+  canManageAdmins = false,
   loading,
   onToggle,
   onArchive,
   onInspect,
 }: {
   users: User[]
+  canManageAdmins?: boolean
   loading: boolean
   onToggle: (user: User, active: boolean) => void
   onArchive: (user: User, archived: boolean) => void
@@ -167,7 +178,7 @@ export function AccountsTable({
               <td>{user.phone || 'Non renseigne'}</td>
               <td><AccountLifecycleBadge user={user} /></td>
               <td className="actions-column">
-                {user.role === 'ADMIN' ? (
+                {isProtectedAccount(user, canManageAdmins) ? (
                   <span className="muted">Protege</span>
                 ) : (
                   <ActionsMenu subject={user.fullName} items={accountActions(user, loading, onInspect, onToggle, onArchive)} />

@@ -4,7 +4,7 @@ import { PasswordInput } from '../../components/PasswordInput'
 import { useToast } from '../../components/toast-context'
 import { useAuth } from '../../hooks/use-auth'
 import { getApiError } from '../../services/api'
-import type { Role } from '../../types/api'
+import type { UserRole } from '../../types/api'
 
 export function RegisterForm() {
   const { register } = useAuth()
@@ -13,7 +13,7 @@ export function RegisterForm() {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('+22177')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<Exclude<Role, 'ADMIN'>>('EMPLOYEUR')
+  const [role, setRole] = useState<UserRole>('EMPLOYEUR')
   const [error, setError] = useState({ message: '', fields: {} })
   const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -72,7 +72,7 @@ export function RegisterForm() {
       </label>
       <label>
         Type de compte
-        <select value={role} onChange={(event) => setRole(event.target.value as Exclude<Role, 'ADMIN'>)}>
+        <select value={role} onChange={(event) => setRole(event.target.value as UserRole)}>
           <option value="EMPLOYEUR">Employeur</option>
           <option value="PRESTATAIRE">Prestataire</option>
         </select>

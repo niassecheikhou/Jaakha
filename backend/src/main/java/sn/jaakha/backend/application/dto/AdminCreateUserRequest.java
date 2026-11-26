@@ -24,6 +24,7 @@ public record AdminCreateUserRequest(
                 message = "Le mot de passe doit contenir au moins 6 caracteres, une majuscule, une minuscule, un chiffre et un caractere special."
         ) String password,
 
-        @Pattern(regexp = "EMPLOYEUR|PRESTATAIRE", message = "Le role doit etre EMPLOYEUR ou PRESTATAIRE.") String role
+        // ADMIN est accepte ici mais reserve au super administrateur (controle dans AdminService).
+        @Pattern(regexp = "EMPLOYEUR|PRESTATAIRE|ADMIN", message = "Le role doit etre EMPLOYEUR, PRESTATAIRE ou ADMIN.") String role
 ) {
 }

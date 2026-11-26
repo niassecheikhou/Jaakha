@@ -57,6 +57,8 @@ public class UserAccountSchemaInitializer {
             jdbcTemplate.execute(
                     "alter table app_user add column if not exists archived boolean not null default false"
             );
+            // Administrateur ayant cree le compte (null pour une inscription libre ou le compte initial).
+            jdbcTemplate.execute("alter table app_user add column if not exists created_by uuid");
             jdbcTemplate.execute("""
                     create table if not exists booking (
                         id uuid primary key,
@@ -140,7 +142,7 @@ public class UserAccountSchemaInitializer {
     }
 
     /**
-     * Cree le compte administrateur initial. Aucun mot de passe par defaut : si ADMIN_EMAIL est
+     * Cree le compte super administrateur initial (role SUPER_ADMIN). Aucun mot de passe par defaut : si ADMIN_EMAIL est
      * renseigne sans ADMIN_PASSWORD, le demarrage echoue plutot que de creer un admin au mot de passe connu.
      */
     void ensureAdminAccount(
@@ -159,12 +161,25 @@ public class UserAccountSchemaInitializer {
             );
         }
 
-        Integer existingAdmins = jdbcTemplate.queryForObject(
+        String email = adminEmail.trim().toLowerCase(Locale.ROOT);
+        Integer existingAccounts = jdbcTemplate.queryForObject(
                 "select count(*) from app_user where lower(email) = ?",
                 Integer.class,
-                adminEmail.trim().toLowerCase(Locale.ROOT)
+                email
         );
-        if (existingAdmins != null && existingAdmins > 0) {
+        if (existingAccounts != null && existingAccounts > 0) {
+            // Migration : le compte initial cree avant l'arrivee du role SUPER_ADMIN etait un ADMIN.
+            // Il devient super administrateur tant qu'aucun super administrateur n'existe.
+            Integer superAdmins = jdbcTemplate.queryForObject(
+                    "select count(*) from app_user where role = 'SUPER_ADMIN'",
+                    Integer.class
+            );
+            if (superAdmins == null || superAdmins == 0) {
+                jdbcTemplate.update(
+                        "update app_user set role = 'SUPER_ADMIN', updated_at = current_timestamp where lower(email) = ? and role = 'ADMIN'",
+                        email
+                );
+            }
             return;
         }
 
@@ -173,10 +188,10 @@ public class UserAccountSchemaInitializer {
                             id, full_name, email, phone, password_hash, role,
                             email_verified, active, archived, created_at, updated_at
                         )
-                        values (?, 'Admin Jaankha', ?, ?, ?, 'ADMIN', true, true, false, current_timestamp, current_timestamp)
+                        values (?, 'Super Admin Jaankha', ?, ?, ?, 'SUPER_ADMIN', true, true, false, current_timestamp, current_timestamp)
                         """,
                 UUID.randomUUID(),
-                adminEmail.trim().toLowerCase(Locale.ROOT),
+                email,
                 adminPhone.trim(),
                 passwordEncoder.encode(adminPassword)
         );

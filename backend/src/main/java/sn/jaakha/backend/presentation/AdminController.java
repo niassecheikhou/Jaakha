@@ -45,8 +45,7 @@ public class AdminController {
 
     @GetMapping("/users")
     public List<UserResponse> users(HttpServletRequest request) {
-        currentUserService.requireAdmin(request);
-        return adminService.users();
+        return adminService.users(currentUserService.requireAdmin(request));
     }
 
     @GetMapping("/users/{id}/identity-photo")
@@ -66,8 +65,7 @@ public class AdminController {
             HttpServletRequest httpRequest,
             @Valid @RequestBody AdminCreateUserRequest request
     ) {
-        currentUserService.requireAdmin(httpRequest);
-        return adminService.createUser(request);
+        return adminService.createUser(currentUserService.requireAdmin(httpRequest), request);
     }
 
     @PatchMapping("/users/{id}/active")
@@ -76,8 +74,7 @@ public class AdminController {
             @PathVariable UUID id,
             @Valid @RequestBody AccountStatusUpdateRequest request
     ) {
-        currentUserService.requireAdmin(httpRequest);
-        return adminService.updateUserActive(id, request.active());
+        return adminService.updateUserActive(currentUserService.requireAdmin(httpRequest), id, request.active());
     }
 
     @PatchMapping("/users/{id}/archive")
@@ -86,8 +83,7 @@ public class AdminController {
             @PathVariable UUID id,
             @Valid @RequestBody AccountArchiveRequest request
     ) {
-        currentUserService.requireAdmin(httpRequest);
-        return adminService.updateUserArchived(id, request.archived());
+        return adminService.updateUserArchived(currentUserService.requireAdmin(httpRequest), id, request.archived());
     }
 
     @GetMapping("/providers")

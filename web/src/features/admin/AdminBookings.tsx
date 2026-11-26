@@ -4,6 +4,7 @@ import { StatusBadge } from '../../components/StatusBadge'
 import type { Booking, BookingStatus, ProviderProfile, User } from '../../types/api'
 import { isWithinPeriod, periodBuckets, periodRange, type AnalysisPeriod } from '../../utils/analysis-period'
 import { formatPrice, formatStatus } from '../../utils/format'
+import { isAdministrationRole } from '../../utils/roles'
 import { ActivityIcon, CheckIcon, FlagIcon, PlayIcon, XIcon } from './AdminIcons'
 import { bookingReference } from './admin-booking-utils'
 import { displayRole } from './admin-utils'
@@ -264,7 +265,7 @@ function AdminRecentActivitiesPanel({
       timestamp: recentActivityDate(registrationByUserId.get(provider.userId) ?? ''),
     }))
   const userActivities: RecentActivity[] = users
-    .filter((currentUser) => currentUser.role !== 'ADMIN')
+    .filter((currentUser) => !isAdministrationRole(currentUser.role))
     .filter((currentUser) => isWithinPeriod(currentUser.createdAt, range))
     .map((currentUser) => ({
       id: `user-${currentUser.id}`,

@@ -15,7 +15,7 @@ export function AdminProfilePanel() {
 
   return (
     <section className="panel">
-      <h2>Mon profil administrateur</h2>
+      <h2>{user?.role === 'SUPER_ADMIN' ? 'Mon profil super administrateur' : 'Mon profil administrateur'}</h2>
       <div className="form-grid">
         <ProfilePhotoUploader currentPhoto={profileQuery.data?.photoUrl} />
         <div className="account-summary span-2">

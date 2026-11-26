@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sn.jaakha.backend.application.dto.AdminCreateUserRequest;
+import sn.jaakha.backend.application.dto.AuthenticatedUser;
 import sn.jaakha.backend.application.dto.BookingResponse;
 import sn.jaakha.backend.application.dto.ProviderProfileResponse;
 import sn.jaakha.backend.application.dto.UserResponse;
@@ -19,6 +20,7 @@ import sn.jaakha.backend.domain.repository.ProviderProfileRepository;
 import sn.jaakha.backend.infrastructure.persistence.BookingAdminRepository;
 import sn.jaakha.backend.infrastructure.persistence.UserAccountRepository;
 import sn.jaakha.backend.presentation.ConflictException;
+import sn.jaakha.backend.presentation.ForbiddenException;
 
 @Service
 public class AdminService {
@@ -48,15 +50,29 @@ public class AdminService {
         this.authService = authService;
     }
 
+    /**
+     * Le super administrateur voit tous les comptes ; un administrateur ne voit que les employeurs
+     * et les prestataires (les comptes d'administration ne le concernent pas).
+     */
     @Transactional(readOnly = true)
-    public List<UserResponse> users() {
-        return userAccountRepository.findAll();
+    public List<UserResponse> users(AuthenticatedUser actor) {
+        List<UserResponse> users = userAccountRepository.findAll();
+        if (Roles.isSuperAdmin(actor.role())) {
+            return users;
+        }
+        return users.stream()
+                .filter(user -> !Roles.isAdministration(user.role()))
+                .toList();
     }
 
     @Transactional
-    public UserResponse createUser(AdminCreateUserRequest request) {
+    public UserResponse createUser(AuthenticatedUser actor, AdminCreateUserRequest request) {
         UUID userId = UUID.randomUUID();
-        String role = request.role() == null || request.role().isBlank() ? "EMPLOYEUR" : request.role();
+        String role = request.role() == null || request.role().isBlank() ? Roles.EMPLOYEUR : request.role();
+        boolean adminAccount = Roles.ADMIN.equals(role);
+        if (adminAccount && !Roles.isSuperAdmin(actor.role())) {
+            throw new ForbiddenException("Seul le super administrateur peut creer un compte administrateur.");
+        }
 
         try {
             userAccountRepository.create(
@@ -66,7 +82,9 @@ public class AdminService {
                     request.phone().trim(),
                     passwordEncoder.encode(request.password()),
                     role,
-                    false
+                    // Un administrateur n'a pas de dossier a faire valider : il est actif des sa creation.
+                    adminAccount,
+                    actor.id()
             );
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("Un compte existe deja avec cet email ou ce numero de telephone.");
@@ -100,12 +118,12 @@ public class AdminService {
     }
 
     @Transactional
-    public UserResponse updateUserActive(UUID id, boolean active) {
-        UserResponse user = findEditableUser(id);
+    public UserResponse updateUserActive(AuthenticatedUser actor, UUID id, boolean active) {
+        UserResponse user = findEditableUser(actor, id);
         if (user.archived()) {
             throw new IllegalArgumentException("Ce compte est archive. Restaure-le avant de modifier sa validation.");
         }
-        if (active) {
+        if (active && !Roles.isAdministration(user.role())) {
             assertProfileReadyForValidation(user);
         }
 
@@ -115,8 +133,8 @@ public class AdminService {
     }
 
     @Transactional
-    public UserResponse updateUserArchived(UUID id, boolean archived) {
-        findEditableUser(id);
+    public UserResponse updateUserArchived(AuthenticatedUser actor, UUID id, boolean archived) {
+        findEditableUser(actor, id);
         userAccountRepository.updateArchived(id, archived);
         return userAccountRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Le compte utilisateur est introuvable."));
@@ -138,11 +156,29 @@ public class AdminService {
         return booking;
     }
 
-    private UserResponse findEditableUser(UUID id) {
+    /**
+     * Regles de gestion des comptes :
+     * - un compte SUPER_ADMIN n'est jamais modifiable depuis le dashboard ;
+     * - un compte ADMIN n'est modifiable que par le super administrateur qui l'a cree
+     *   (ou par tout super administrateur s'il a ete cree avant l'arrivee de ce role) ;
+     * - les comptes EMPLOYEUR et PRESTATAIRE sont geres par tout administrateur.
+     */
+    private UserResponse findEditableUser(AuthenticatedUser actor, UUID id) {
         UserResponse user = userAccountRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Le compte utilisateur est introuvable."));
-        if ("ADMIN".equals(user.role())) {
-            throw new IllegalArgumentException("Le compte administrateur ne peut pas etre modifie depuis ce dashboard.");
+        if (Roles.isSuperAdmin(user.role())) {
+            throw new ForbiddenException("Le compte super administrateur ne peut pas etre modifie depuis ce dashboard.");
+        }
+        if (Roles.ADMIN.equals(user.role())) {
+            if (!Roles.isSuperAdmin(actor.role())) {
+                throw new ForbiddenException("Seul le super administrateur peut gerer un compte administrateur.");
+            }
+            boolean createdByAnotherSuperAdmin = userAccountRepository.findCreatedBy(id)
+                    .map(creator -> !creator.equals(actor.id()))
+                    .orElse(false);
+            if (createdByAnotherSuperAdmin) {
+                throw new ForbiddenException("Tu ne peux gerer que les administrateurs que tu as crees.");
+            }
         }
         return user;
     }

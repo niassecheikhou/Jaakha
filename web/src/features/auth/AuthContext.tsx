@@ -13,6 +13,7 @@ import {
   storeAuth,
 } from '../../utils/auth-storage'
 import type { LoginPayload, RegisterPayload, User } from '../../types/api'
+import { isAdministrationRole } from '../../utils/roles'
 import { AuthContext } from './auth-context'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -60,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 function defaultRouteFor(role: User['role']) {
-  if (role === 'ADMIN') {
+  if (isAdministrationRole(role)) {
     return '/admin'
   }
   if (role === 'PRESTATAIRE') {
