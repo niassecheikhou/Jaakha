@@ -25,6 +25,34 @@ public class BookingAdminRepository {
         return jdbcTemplate.query(bookingQuery(" where b.status = ?"), (resultSet, rowNumber) -> mapBooking(resultSet), status);
     }
 
+    /**
+     * Reservations dont l'employeur ou le prestataire a ete cree par cet administrateur.
+     */
+    public List<BookingResponse> findAllManagedBy(UUID adminId, String status) {
+        String managed = " where (employer.created_by = ? or provider_user.created_by = ?)";
+        if (status == null || status.isBlank()) {
+            return jdbcTemplate.query(bookingQuery(managed), (resultSet, rowNumber) -> mapBooking(resultSet), adminId, adminId);
+        }
+        return jdbcTemplate.query(bookingQuery(managed + " and b.status = ?"),
+                (resultSet, rowNumber) -> mapBooking(resultSet), adminId, adminId, status);
+    }
+
+    public boolean isManagedBy(UUID bookingId, UUID adminId) {
+        Integer count = jdbcTemplate.queryForObject("""
+                        select count(*)
+                        from booking b
+                        join app_user employer on employer.id = b.employer_id
+                        join provider_profile provider on provider.id = b.provider_id
+                        left join app_user provider_user on provider_user.id = provider.user_id
+                        where b.id = ?
+                          and (employer.created_by = ? or provider_user.created_by = ?)
+                        """,
+                Integer.class,
+                bookingId, adminId, adminId
+        );
+        return count != null && count > 0;
+    }
+
     public Optional<String> findStatus(UUID id) {
         return jdbcTemplate.query(
                 "select status from booking where id = ?",
@@ -61,6 +89,7 @@ public class BookingAdminRepository {
                 from booking b
                 join app_user employer on employer.id = b.employer_id
                 join provider_profile provider on provider.id = b.provider_id
+                left join app_user provider_user on provider_user.id = provider.user_id
                 """ + whereClause + " order by b.created_at desc";
     }
 

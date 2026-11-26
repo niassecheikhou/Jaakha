@@ -6,11 +6,13 @@ import { useToast } from '../../components/toast-context'
 import { WorkspaceShell, type WorkspaceNavItem } from '../../components/WorkspaceShell'
 import { useAuth } from '../../hooks/use-auth'
 import { adminApi, getApiError } from '../../services/api'
-import type { AdminCreateUserPayload, BookingStatus, ProviderStatus, User } from '../../types/api'
+import type { AdminBookingPayload,
+  AdminCreateUserPayload, BookingStatus, ProviderStatus, User } from '../../types/api'
 import { isWithinPeriod, periodRange, type AnalysisPeriod } from '../../utils/analysis-period'
 import { formatStatus } from '../../utils/format'
 import { AccountsTable, UserDetailPanel } from './AdminAccounts'
 import {
+  HistoryIcon,
   BagIcon,
   DashboardIcon,
   HourglassIcon,
@@ -23,11 +25,14 @@ import { AdminContactMessages } from './AdminContactMessages'
 import { AdminProfilePanel } from './AdminProfilePanel'
 import { ProfileIcon } from '../employer/EmployerIcons'
 import { ProviderProfilesReview } from './AdminProviders'
+import { AdminAuditLog } from './AdminAuditLog'
+import { AdminBookingForm } from './AdminBookingForm'
 import { CreateUserForm } from './CreateUserForm'
 import { CsvUsersImport } from './CsvUsersImport'
 import { bookingReference } from './admin-booking-utils'
 import type { AdminMenu } from './admin-types'
 import { countPendingProfileApprovals } from './admin-utils'
+import { isAdministrationRole, isSuperAdminRole } from '../../utils/roles'
 
 export function AdminDashboard() {
   const { user } = useAuth()
@@ -37,10 +42,16 @@ export function AdminDashboard() {
   const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod | null>(null)
   const [adminError, setAdminError] = useState({ message: '', fields: {} })
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: adminApi.users })
+  // Rafraichi automatiquement : un dossier complete par un compte apparait sans recharger la page.
+  const usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: adminApi.users, refetchInterval: 10_000 })
   const providersQuery = useQuery({ queryKey: ['admin', 'providers'], queryFn: () => adminApi.providers() })
   const bookingsQuery = useQuery({ queryKey: ['admin', 'bookings'], queryFn: () => adminApi.bookings() })
-  const contactMessagesQuery = useQuery({ queryKey: ['admin', 'contact-messages'], queryFn: adminApi.contactMessages })
+  // Messages de contact : reserves au super administrateur (l'API les refuse aux administrateurs).
+  const contactMessagesQuery = useQuery({
+    queryKey: ['admin', 'contact-messages'],
+    queryFn: adminApi.contactMessages,
+    enabled: isSuperAdminRole(user?.role),
+  })
 
   const providerStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; providerName: string; status: ProviderStatus }) => adminApi.updateProviderStatus(id, status),
@@ -97,6 +108,13 @@ export function AdminDashboard() {
       toast.error('Archivage du compte impossible', apiError.message)
     },
   })
+  const createBookingMutation = useMutation({
+    mutationFn: (payload: AdminBookingPayload) => adminApi.createBooking(payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] })
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  })
   const bookingStatusMutation = useMutation({
     mutationFn: ({ id, status }: { bookingReference: string; id: string; status: BookingStatus }) => adminApi.updateBookingStatus(id, status),
     onSuccess: (_, variables) => {
@@ -114,7 +132,10 @@ export function AdminDashboard() {
     onError: (caughtError) => toast.error('Export impossible', getApiError(caughtError).message),
   })
 
+  const isSuperAdmin = isSuperAdminRole(user?.role)
   const manageableUsers = usersQuery.data?.filter((currentUser) => currentUser.role === 'EMPLOYEUR' || currentUser.role === 'PRESTATAIRE') ?? []
+  // Comptes d'administration : renvoyes par l'API uniquement au super administrateur.
+  const administrationUsers = usersQuery.data?.filter((currentUser) => isAdministrationRole(currentUser.role)) ?? []
   const providers = providersQuery.data ?? []
   const bookings = bookingsQuery.data ?? []
   const pendingBookings = bookings.filter((booking) => booking.status === 'REQUESTED')
@@ -127,14 +148,17 @@ export function AdminDashboard() {
     const allUsers = usersQuery.data ?? []
     const allBookings = bookingsQuery.data ?? []
     const allProviders = providersQuery.data ?? []
-    const usersInPeriod = allUsers.filter((account) => isWithinPeriod(account.createdAt, range))
+    // Seuls les employeurs et prestataires sont comptes : le chiffre est le meme pour un admin et le super admin.
+    const usersInPeriod = allUsers
+      .filter((account) => !isAdministrationRole(account.role))
+      .filter((account) => isWithinPeriod(account.createdAt, range))
     const userIdsInPeriod = new Set(usersInPeriod.map((account) => account.id))
     const bookingsInPeriod = allBookings.filter((booking) => isWithinPeriod(booking.createdAt, range))
     return {
       caption: range ? range.label : 'Depuis le début',
       users: usersInPeriod.length,
       pendingProfiles: countPendingProfileApprovals(
-        usersInPeriod.filter((account) => account.role === 'EMPLOYEUR' || account.role === 'PRESTATAIRE'),
+        usersInPeriod,
         // Un profil prestataire est rattache a la periode d'inscription de son compte.
         allProviders.filter((provider) => userIdsInPeriod.has(provider.userId)),
       ),
@@ -160,12 +184,17 @@ export function AdminDashboard() {
       icon: <BagIcon />,
       badge: pendingBookings.length.toLocaleString('fr-FR'),
     },
-    {
-      id: 'contact',
-      label: 'Messages contact',
-      icon: <MailIcon />,
-      badge: contactMessages.length.toLocaleString('fr-FR'),
-    },
+    ...(isSuperAdmin
+      ? [
+          { id: 'history' as const, label: 'Historique des actions', icon: <HistoryIcon /> },
+          {
+            id: 'contact' as const,
+            label: 'Messages contact',
+            icon: <MailIcon />,
+            badge: contactMessages.length.toLocaleString('fr-FR'),
+          },
+        ]
+      : []),
     {
       id: 'profile',
       label: 'Mon profil',
@@ -203,13 +232,32 @@ export function AdminDashboard() {
         <div className="dashboard-grid">
           <section className="panel span-2">
             <h2>Creer un compte</h2>
-            <CreateUserForm loading={createUserMutation.isPending} onCreate={(payload) => createUserMutation.mutateAsync(payload)} />
+            <CreateUserForm allowAdmin={isSuperAdmin} loading={createUserMutation.isPending} onCreate={(payload) => createUserMutation.mutateAsync(payload)} />
             <CsvUsersImport loading={createUserMutation.isPending} onCreate={(payload) => createUserMutation.mutateAsync(payload)} />
           </section>
+          {isSuperAdmin && (
+            <section className="panel span-2">
+              <h2>Administrateurs</h2>
+              <p className="muted">Comptes administrateur que tu as crees : tu peux les desactiver, les reactiver ou les archiver.</p>
+              {administrationUsers.length === 0 ? (
+                <p className="empty-state">Aucun compte administrateur pour le moment.</p>
+              ) : (
+                <AccountsTable
+                  canManageAdmins
+                  loading={userStatusMutation.isPending || userArchiveMutation.isPending}
+                  users={administrationUsers}
+                  onToggle={(selectedAccount, active) => userStatusMutation.mutate({ id: selectedAccount.id, active, userName: selectedAccount.fullName })}
+                  onArchive={(selectedAccount, archived) => userArchiveMutation.mutate({ id: selectedAccount.id, archived, userName: selectedAccount.fullName })}
+                  onInspect={setSelectedUser}
+                />
+              )}
+            </section>
+          )}
           <section className="panel span-2">
             <h2>Gestion des comptes</h2>
+            {!isSuperAdmin && <p className="muted">Tu geres uniquement les comptes que tu as crees, leurs profils et leurs reservations.</p>}
             {manageableUsers.length === 0 ? (
-              <p className="empty-state">Aucun compte employeur ou prestataire pour le moment.</p>
+              <p className="empty-state">{isSuperAdmin ? 'Aucun compte employeur ou prestataire pour le moment.' : "Aucun compte cree par toi pour le moment : les comptes que tu ajoutes apparaitront ici."}</p>
             ) : (
               <AccountsTable
                 loading={userStatusMutation.isPending || userArchiveMutation.isPending}
@@ -229,14 +277,26 @@ export function AdminDashboard() {
         </div>
       )}
       {activeMenu === 'bookings' && (
-        <BookingsManagement
-          bookings={bookings}
-          loading={bookingStatusMutation.isPending}
-          onStatusChange={(booking, status) => bookingStatusMutation.mutate({ id: booking.id, bookingReference: bookingReference(booking.id), status })}
-        />
+        <>
+          <AdminBookingForm
+            employers={usersQuery.data ?? []}
+            loading={createBookingMutation.isPending}
+            onCreate={(payload) => createBookingMutation.mutateAsync(payload)}
+          />
+          <BookingsManagement
+            bookings={bookings}
+            loading={bookingStatusMutation.isPending}
+            onStatusChange={(booking, status) => bookingStatusMutation.mutate({ id: booking.id, bookingReference: bookingReference(booking.id), status })}
+          />
+        </>
       )}
       {activeMenu === 'profile' && <AdminProfilePanel />}
-      {activeMenu === 'contact' && (
+      {activeMenu === 'history' && isSuperAdmin && (
+        <div className="dashboard-grid">
+          <AdminAuditLog users={usersQuery.data ?? []} />
+        </div>
+      )}
+      {activeMenu === 'contact' && isSuperAdmin && (
         <div className="dashboard-grid">
           <AdminContactMessages
             exporting={exportContactMessagesMutation.isPending}

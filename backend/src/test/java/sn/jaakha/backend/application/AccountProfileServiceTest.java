@@ -48,7 +48,7 @@ class AccountProfileServiceTest {
         when(accountProfileRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         AccountProfileResponse response = accountProfileService.saveMine(OWNER, new AccountProfileRequest(
-                "Bio", "Dakar", new BigDecimal("50000"), 2, List.of("menage"), "Tuteur Test", "+221771234567"
+                "Bio", "Dakar", new BigDecimal("50000"), 2, List.of("menage"), "Tuteur Test", "+221771234567", null
         ));
 
         assertThat(response.photoUrl()).isEqualTo(PHOTO);

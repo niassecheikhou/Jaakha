@@ -95,6 +95,9 @@ public class AccountProfileService {
         profile.setSkills(joinSkills(request.skills()));
         profile.setGuardianFullName(blankToNull(request.guardianFullName()));
         profile.setGuardianPhone(blankToNull(request.guardianPhone()));
+        if (request.address() != null) {
+            profile.setAddress(blankToNull(request.address()));
+        }
         return AccountProfileResponse.from(accountProfileRepository.save(profile));
     }
 

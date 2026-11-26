@@ -1,5 +1,7 @@
 package sn.jaakha.backend.presentation;
 
+import sn.jaakha.backend.application.dto.AuthenticatedUser;
+import sn.jaakha.backend.application.AuditLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -20,12 +22,14 @@ import sn.jaakha.backend.application.dto.StatusUpdateRequest;
 @RestController
 @RequestMapping("/api/bookings")
 public class BookingController {
+    private final AuditLogService auditLogService;
     private final BookingService bookingService;
     private final CurrentUserService currentUserService;
 
-    public BookingController(BookingService bookingService, CurrentUserService currentUserService) {
+    public BookingController(BookingService bookingService, CurrentUserService currentUserService, AuditLogService auditLogService) {
         this.bookingService = bookingService;
         this.currentUserService = currentUserService;
+        this.auditLogService = auditLogService;
     }
 
     @PostMapping
@@ -33,7 +37,11 @@ public class BookingController {
             HttpServletRequest request,
             @Valid @RequestBody BookingCreateRequest payload
     ) {
-        return bookingService.create(currentUserService.requireUser(request), payload);
+        AuthenticatedUser user = currentUserService.requireUser(request);
+        BookingResponse booking = bookingService.create(user, payload);
+        auditLogService.record(user, AuditLogService.BOOKING_CREATED, "RESERVATION", booking.id(),
+                "Reservation de " + booking.providerName(), "Prestation du " + booking.serviceDate());
+        return booking;
     }
 
     @GetMapping("/me")
@@ -47,6 +55,10 @@ public class BookingController {
             @PathVariable UUID id,
             @Valid @RequestBody StatusUpdateRequest payload
     ) {
-        return bookingService.updateStatus(currentUserService.requireUser(request), id, payload.status());
+        AuthenticatedUser user = currentUserService.requireUser(request);
+        BookingResponse booking = bookingService.updateStatus(user, id, payload.status());
+        auditLogService.record(user, AuditLogService.BOOKING_STATUS_CHANGED, "RESERVATION", booking.id(),
+                booking.employerName() + " / " + booking.providerName(), "Nouveau statut : " + AuditLogService.bookingStatusLabel(booking.status()));
+        return booking;
     }
 }

@@ -53,10 +53,26 @@ public class CurrentUserService {
         }
     }
 
+    /**
+     * Compte d'administration (ADMIN ou SUPER_ADMIN) actif. Un administrateur desactive par le
+     * super administrateur perd immediatement ses droits, meme avec une session encore valide.
+     */
     public AuthenticatedUser requireAdmin(HttpServletRequest request) {
         AuthenticatedUser user = requireUser(request);
-        if (!"ADMIN".equals(user.role())) {
+        if (!Roles.isAdministration(user.role())) {
             throw new ForbiddenException("Tu dois etre connecte avec un compte administrateur pour effectuer cette action.");
+        }
+        Boolean active = jdbcTemplate.queryForObject("select active from app_user where id = ?", Boolean.class, user.id());
+        if (!Boolean.TRUE.equals(active)) {
+            throw new ForbiddenException("Ton compte administrateur est desactive. Contacte le super administrateur.");
+        }
+        return user;
+    }
+
+    public AuthenticatedUser requireSuperAdmin(HttpServletRequest request) {
+        AuthenticatedUser user = requireAdmin(request);
+        if (!Roles.isSuperAdmin(user.role())) {
+            throw new ForbiddenException("Seul le super administrateur peut effectuer cette action.");
         }
         return user;
     }

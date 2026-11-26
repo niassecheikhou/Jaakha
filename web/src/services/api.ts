@@ -8,8 +8,11 @@ import { api } from './costante'
 import type {
   AccountProfile,
   AccountProfilePayload,
+  AdminBookingPayload,
   AdminCreateUserPayload,
   ApiError,
+  AuditLog,
+  AuditLogFilters,
   AuthResponse,
   Booking,
   BookingPayload,
@@ -102,6 +105,11 @@ export const authApi = {
   async login(payload: LoginPayload) {
     const { data } = await api.post<AuthResponse>('/auth/login', payload)
     storeAuth(data.token, data.user)
+    return data
+  },
+  // Compte connecte relu cote serveur (role et informations a jour).
+  async me() {
+    const { data } = await api.get<User>('/auth/me')
     return data
   },
   async forgotPassword(payload: ForgotPasswordPayload) {
@@ -236,6 +244,16 @@ export const adminApi = {
     const { data } = await api.get<Booking[]>('/admin/bookings', {
       params: status ? { status } : undefined,
     })
+    return data
+  },
+  // Historique des actions (super administrateur), filtres optionnels.
+  async auditLogs(filters: AuditLogFilters) {
+    const { data } = await api.get<AuditLog[]>('/admin/audit-logs', { params: filters })
+    return data
+  },
+  // Reservation creee par l'administrateur pour un employeur qu'il gere.
+  async createBooking(payload: AdminBookingPayload) {
+    const { data } = await api.post<Booking>('/admin/bookings', payload)
     return data
   },
   async contactMessages() {

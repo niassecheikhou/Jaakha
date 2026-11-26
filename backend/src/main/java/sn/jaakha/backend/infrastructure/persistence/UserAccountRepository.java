@@ -26,7 +26,7 @@ public class UserAccountRepository {
                         select u.id, u.full_name, u.email, u.phone, u.role, u.email_verified,
                                u.active, u.archived, u.created_at, p.photo_url, p.identity_photo_url, p.identity_photo_back_url,
                                p.bio, p.zone, p.monthly_rate, p.experience_years,
-                               p.skills, p.guardian_full_name, p.guardian_phone
+                               p.skills, p.guardian_full_name, p.guardian_phone, p.address
                         from app_user u
                         left join account_profile p on p.owner_key = cast(u.id as varchar)
                         order by u.created_at desc
@@ -35,12 +35,37 @@ public class UserAccountRepository {
         );
     }
 
+    /** Comptes crees par cet administrateur (perimetre d'un ADMIN). */
+    public List<UserResponse> findAllCreatedBy(UUID creatorId) {
+        return jdbcTemplate.query("""
+                        select u.id, u.full_name, u.email, u.phone, u.role, u.email_verified,
+                               u.active, u.archived, u.created_at, p.photo_url, p.identity_photo_url, p.identity_photo_back_url,
+                               p.bio, p.zone, p.monthly_rate, p.experience_years,
+                               p.skills, p.guardian_full_name, p.guardian_phone, p.address
+                        from app_user u
+                        left join account_profile p on p.owner_key = cast(u.id as varchar)
+                        where u.created_by = ?
+                        order by u.created_at desc
+                        """,
+                (resultSet, rowNumber) -> mapUser(resultSet),
+                creatorId
+        );
+    }
+
+    public Set<UUID> findIdsCreatedBy(UUID creatorId) {
+        return new LinkedHashSet<>(jdbcTemplate.query(
+                "select id from app_user where created_by = ?",
+                (resultSet, rowNumber) -> resultSet.getObject("id", UUID.class),
+                creatorId
+        ));
+    }
+
     public Optional<UserResponse> findById(UUID id) {
         List<UserResponse> users = jdbcTemplate.query("""
                         select u.id, u.full_name, u.email, u.phone, u.role, u.email_verified,
                                u.active, u.archived, u.created_at, p.photo_url, p.identity_photo_url, p.identity_photo_back_url,
                                p.bio, p.zone, p.monthly_rate, p.experience_years,
-                               p.skills, p.guardian_full_name, p.guardian_phone
+                               p.skills, p.guardian_full_name, p.guardian_phone, p.address
                         from app_user u
                         left join account_profile p on p.owner_key = cast(u.id as varchar)
                         where u.id = ?
@@ -60,12 +85,26 @@ public class UserAccountRepository {
             String role,
             boolean active
     ) {
+        create(id, fullName, email, phone, passwordHash, role, active, null);
+    }
+
+    /** Cree un compte en memorisant l'administrateur qui l'a cree (null pour une inscription). */
+    public void create(
+            UUID id,
+            String fullName,
+            String email,
+            String phone,
+            String passwordHash,
+            String role,
+            boolean active,
+            UUID createdBy
+    ) {
         jdbcTemplate.update("""
                         insert into app_user (
                             id, full_name, email, phone, password_hash, role,
-                            email_verified, active, archived, created_at, updated_at
+                            email_verified, active, archived, created_by, created_at, updated_at
                         )
-                        values (?, ?, ?, ?, ?, ?, false, ?, false, current_timestamp, current_timestamp)
+                        values (?, ?, ?, ?, ?, ?, false, ?, false, ?, current_timestamp, current_timestamp)
                         """,
                 id,
                 fullName,
@@ -73,8 +112,17 @@ public class UserAccountRepository {
                 phone,
                 passwordHash,
                 role,
-                active
+                active,
+                createdBy
         );
+    }
+
+    public Optional<UUID> findCreatedBy(UUID id) {
+        return jdbcTemplate.query(
+                "select created_by from app_user where id = ?",
+                (resultSet, rowNumber) -> Optional.ofNullable(resultSet.getObject("created_by", UUID.class)),
+                id
+        ).stream().findFirst().flatMap(value -> value);
     }
 
     public void updateActive(UUID id, boolean active) {
@@ -126,7 +174,8 @@ public class UserAccountRepository {
                 splitSkills(resultSet.getString("skills")),
                 resultSet.getString("guardian_full_name"),
                 resultSet.getString("guardian_phone"),
-                createdAt(resultSet)
+                createdAt(resultSet),
+                resultSet.getString("address")
         );
     }
 

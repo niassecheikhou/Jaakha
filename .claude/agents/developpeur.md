@@ -15,7 +15,8 @@ Méthode pour chaque tâche :
 
 Points d'attention spécifiques à JAANKHA :
 - Sécurité et confiance sont le cœur du projet : validation des entrées, contrôle des rôles
-  (`EMPLOYEUR`, `PRESTATAIRE`, `ADMIN` — n'invente pas d'autre rôle), protection des données personnelles.
+  (`EMPLOYEUR`, `PRESTATAIRE`, `ADMIN`, `SUPER_ADMIN` — n'invente pas d'autre rôle ; seul le `SUPER_ADMIN`
+  crée et gère les comptes `ADMIN`), protection des données personnelles.
 - Toute route protégée doit appeler `currentUserService.requireUser(request)` ou `requireAdmin(request)` :
   Spring Security laisse tout passer (`permitAll`), le contrôle d'accès est fait dans les contrôleurs.
 - Les pièces d'identité sont privées : stockées hors du dossier public et servies uniquement

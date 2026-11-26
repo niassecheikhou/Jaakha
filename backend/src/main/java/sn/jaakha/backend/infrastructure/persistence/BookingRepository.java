@@ -42,6 +42,30 @@ public class BookingRepository {
         return findById(id);
     }
 
+    /** Reservation creee avec ses details (par un administrateur pour un employeur). */
+    public BookingResponse create(
+            UUID employerId,
+            UUID providerId,
+            LocalDate serviceDate,
+            LocalTime startTime,
+            int durationHours,
+            String address,
+            String instructions
+    ) {
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update("""
+                        insert into booking (
+                            id, status, service_date, start_time, duration_hours, address,
+                            instructions, employer_id, provider_id, created_at, updated_at
+                        )
+                        values (?, 'REQUESTED', ?, ?, ?, ?, ?, ?, ?, current_timestamp, current_timestamp)
+                        """,
+                id, serviceDate, startTime.truncatedTo(ChronoUnit.MINUTES), durationHours, address, instructions,
+                employerId, providerId
+        );
+        return findById(id);
+    }
+
     public List<BookingResponse> findMine(UUID userId, String role) {
         if ("PRESTATAIRE".equals(role)) {
             return jdbcTemplate.query(

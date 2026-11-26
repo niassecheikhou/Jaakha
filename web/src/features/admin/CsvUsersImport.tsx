@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useToast } from '../../components/toast-context'
 import { getApiError } from '../../services/api'
-import type { AdminCreateUserPayload, Role, User } from '../../types/api'
+import type { AdminCreateUserPayload, User, UserRole } from '../../types/api'
 
 type CsvImportFailure = {
   message: string
@@ -88,7 +88,7 @@ function findCsvColumn(headers: string[], aliases: string[]) {
   return headers.findIndex((header) => aliases.includes(normalizeCsvValue(header)))
 }
 
-function normalizeImportedRole(value: string): Exclude<Role, 'ADMIN'> | null {
+function normalizeImportedRole(value: string): UserRole | null {
   const normalizedRole = normalizeCsvValue(value)
 
   if (normalizedRole === 'prestataire' || normalizedRole === 'provider') {
@@ -105,7 +105,7 @@ function validateImportedUser(payload: {
   fullName: string
   password: string
   phone: string
-  role: Exclude<Role, 'ADMIN'> | null
+  role: UserRole | null
 }) {
   const errors: string[] = []
 

@@ -21,4 +21,5 @@ export type User = {
   guardianPhone: string | null
   // Date d'inscription (ISO-8601).
   createdAt: string | null
+  address: string | null
 }

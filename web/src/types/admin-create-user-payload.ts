@@ -1,9 +1,9 @@
-import type { Role } from './role'
+import type { CreatableRole } from './role'
 
 export type AdminCreateUserPayload = {
   fullName: string
   email: string
   phone: string
   password: string
-  role: Exclude<Role, 'ADMIN'>
+  role: CreatableRole
 }

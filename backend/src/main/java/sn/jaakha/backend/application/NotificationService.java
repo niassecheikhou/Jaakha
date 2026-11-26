@@ -58,11 +58,23 @@ public class NotificationService {
         List<UUID> adminIds = jdbcTemplate.query("""
                         select id
                         from app_user
-                        where role = 'ADMIN'
-                          and active = true
+                        where active = true
                           and archived = false
+                          and (
+                              role = 'SUPER_ADMIN'
+                              or (role = 'ADMIN' and id in (
+                                  select created_by from app_user where id = ?
+                                  union
+                                  select provider_user.created_by
+                                  from provider_profile provider
+                                  join app_user provider_user on provider_user.id = provider.user_id
+                                  where provider.id = ?
+                              ))
+                          )
                         """,
-                (resultSet, rowNumber) -> resultSet.getObject("id", UUID.class)
+                (resultSet, rowNumber) -> resultSet.getObject("id", UUID.class),
+                booking.employerId(),
+                booking.providerId()
         );
         for (UUID adminId : adminIds) {
             jdbcTemplate.update("""

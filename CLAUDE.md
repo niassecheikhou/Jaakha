@@ -33,7 +33,8 @@ Projet de soutenance de Licence en Génie Logiciel.
   → `infrastructure` (persistance JdbcTemplate, sécurité, stockage) / `domain` (entités JPA, repositories)
 - Base : PostgreSQL via Docker, H2 fichier en local sans Docker ; schéma géré par `ddl-auto=update`
   + `UserAccountSchemaInitializer` (Flyway présent mais désactivé)
-- Rôles : `EMPLOYEUR`, `PRESTATAIRE`, `ADMIN` (aucun autre)
+- Rôles : `EMPLOYEUR`, `PRESTATAIRE`, `ADMIN`, `SUPER_ADMIN` (aucun autre). Le `SUPER_ADMIN` (compte initial) a tous les droits
+  d'un admin et est seul à créer/gérer les comptes `ADMIN` ; un `ADMIN` gère les employeurs et prestataires
 - Sécurité : pas de JWT. Token de session opaque (table `session_token`) envoyé en `Authorization: Bearer`,
   vérifié par `CurrentUserService.requireUser` / `requireAdmin` dans chaque contrôleur
   (Spring Security est en `permitAll`). Aucun secret en dur, uniquement des variables d'environnement

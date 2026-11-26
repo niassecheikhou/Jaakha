@@ -153,6 +153,11 @@ public class AuthService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public UserResponse currentUser(UUID userId) {
+        return findById(userId);
+    }
+
     private UserResponse findById(UUID userId) {
         return jdbcTemplate.queryForObject("""
                         select id, full_name, email, phone, role, email_verified, active, archived, created_at
@@ -243,7 +248,8 @@ public class AuthService {
                 List.of(),
                 null,
                 null,
-                createdAt(resultSet)
+                createdAt(resultSet),
+                null
         );
     }
 

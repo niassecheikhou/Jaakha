@@ -28,6 +28,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import sn.jaakha.backend.application.AccountProfileService;
+import sn.jaakha.backend.application.AuditLogService;
 import sn.jaakha.backend.application.CurrentUserService;
 import sn.jaakha.backend.application.ProviderService;
 import sn.jaakha.backend.application.dto.AccountProfileResponse;
@@ -48,6 +49,8 @@ class AccountProfileControllerTest {
     private StorageService storageService;
     @Mock
     private CurrentUserService currentUserService;
+    @Mock
+    private AuditLogService auditLogService;
     @Mock
     private ProviderService providerService;
 
