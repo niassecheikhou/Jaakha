@@ -71,6 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return response.user
   }, [navigate])
 
+  const refreshUser = useCallback((freshUser: User) => {
+    const storedToken = getStoredToken()
+    if (storedToken) {
+      storeAuth(storedToken, freshUser)
+      setUser(freshUser)
+    }
+  }, [])
+
   const logout = useCallback(() => {
     clearStoredAuth()
     setToken(null)
@@ -86,8 +94,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      refreshUser,
     }),
-    [login, logout, register, token, user],
+    [login, logout, refreshUser, register, token, user],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

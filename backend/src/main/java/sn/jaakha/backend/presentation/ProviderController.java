@@ -1,5 +1,6 @@
 package sn.jaakha.backend.presentation;
 
+import sn.jaakha.backend.application.AuditLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -29,6 +30,7 @@ import sn.jaakha.backend.infrastructure.storage.StorageService;
 @RestController
 @RequestMapping("/api/providers")
 public class ProviderController {
+    private final AuditLogService auditLogService;
     private final ProviderService providerService;
     private final ReviewService reviewService;
     private final StorageService storageService;
@@ -38,12 +40,14 @@ public class ProviderController {
             ProviderService providerService,
             ReviewService reviewService,
             StorageService storageService,
-            CurrentUserService currentUserService
+            CurrentUserService currentUserService,
+            AuditLogService auditLogService
     ) {
         this.providerService = providerService;
         this.reviewService = reviewService;
         this.storageService = storageService;
         this.currentUserService = currentUserService;
+        this.auditLogService = auditLogService;
     }
 
     @GetMapping
@@ -65,7 +69,10 @@ public class ProviderController {
             HttpServletRequest request,
             @Valid @RequestBody ProviderProfileRequest payload
     ) {
-        return providerService.saveMine(currentUserService.requireUser(request), payload);
+        AuthenticatedUser user = currentUserService.requireUser(request);
+        ProviderProfileResponse profile = providerService.saveMine(user, payload);
+        auditLogService.record(user, AuditLogService.PROVIDER_PROFILE_UPDATED, "PROFIL_PRESTATAIRE", profile.id(), profile.fullName(), null);
+        return profile;
     }
 
     @PostMapping(value = "/me/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

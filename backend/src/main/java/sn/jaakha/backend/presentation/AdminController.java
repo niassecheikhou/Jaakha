@@ -1,5 +1,8 @@
 package sn.jaakha.backend.presentation;
 
+import sn.jaakha.backend.application.dto.AuditLogResponse;
+import sn.jaakha.backend.application.dto.AuthenticatedUser;
+import sn.jaakha.backend.application.AuditLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -29,6 +32,7 @@ import sn.jaakha.backend.domain.enums.IdentityDocumentSide;
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
+    private final AuditLogService auditLogService;
     private final AdminService adminService;
     private final AccountProfileService accountProfileService;
     private final CurrentUserService currentUserService;
@@ -36,11 +40,13 @@ public class AdminController {
     public AdminController(
             AdminService adminService,
             AccountProfileService accountProfileService,
-            CurrentUserService currentUserService
+            CurrentUserService currentUserService,
+            AuditLogService auditLogService
     ) {
         this.adminService = adminService;
         this.accountProfileService = accountProfileService;
         this.currentUserService = currentUserService;
+        this.auditLogService = auditLogService;
     }
 
     @GetMapping("/users")
@@ -65,7 +71,10 @@ public class AdminController {
             HttpServletRequest httpRequest,
             @Valid @RequestBody AdminCreateUserRequest request
     ) {
-        return adminService.createUser(currentUserService.requireAdmin(httpRequest), request);
+        AuthenticatedUser actor = currentUserService.requireAdmin(httpRequest);
+        UserResponse user = adminService.createUser(actor, request);
+        auditLogService.record(actor, AuditLogService.ACCOUNT_CREATED, "COMPTE", user.id(), user.fullName(), "Role : " + user.role());
+        return user;
     }
 
     @PatchMapping("/users/{id}/active")
@@ -74,7 +83,11 @@ public class AdminController {
             @PathVariable UUID id,
             @Valid @RequestBody AccountStatusUpdateRequest request
     ) {
-        return adminService.updateUserActive(currentUserService.requireAdmin(httpRequest), id, request.active());
+        AuthenticatedUser actor = currentUserService.requireAdmin(httpRequest);
+        UserResponse user = adminService.updateUserActive(actor, id, request.active());
+        auditLogService.record(actor, request.active() ? AuditLogService.ACCOUNT_VALIDATED : AuditLogService.ACCOUNT_INVALIDATED,
+                "COMPTE", user.id(), user.fullName(), "Role : " + user.role());
+        return user;
     }
 
     @PatchMapping("/users/{id}/archive")
@@ -83,7 +96,28 @@ public class AdminController {
             @PathVariable UUID id,
             @Valid @RequestBody AccountArchiveRequest request
     ) {
-        return adminService.updateUserArchived(currentUserService.requireAdmin(httpRequest), id, request.archived());
+        AuthenticatedUser actor = currentUserService.requireAdmin(httpRequest);
+        UserResponse user = adminService.updateUserArchived(actor, id, request.archived());
+        auditLogService.record(actor, request.archived() ? AuditLogService.ACCOUNT_ARCHIVED : AuditLogService.ACCOUNT_RESTORED,
+                "COMPTE", user.id(), user.fullName(), "Role : " + user.role());
+        return user;
+    }
+
+    /**
+     * Historique des actions (reserve au super administrateur). Filtres optionnels : periode [from, to[
+     * en ISO-8601, auteur, role de l'auteur et type d'action.
+     */
+    @GetMapping("/audit-logs")
+    public List<AuditLogResponse> auditLogs(
+            HttpServletRequest request,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) UUID actorId,
+            @RequestParam(required = false) String actorRole,
+            @RequestParam(required = false) String action
+    ) {
+        currentUserService.requireSuperAdmin(request);
+        return auditLogService.search(from, to, actorId, actorRole, action);
     }
 
     @GetMapping("/providers")
@@ -98,8 +132,11 @@ public class AdminController {
             @PathVariable UUID id,
             @Valid @RequestBody StatusUpdateRequest request
     ) {
-        currentUserService.requireAdmin(httpRequest);
-        return adminService.updateProviderStatus(id, request.status());
+        AuthenticatedUser actor = currentUserService.requireAdmin(httpRequest);
+        ProviderProfileResponse profile = adminService.updateProviderStatus(id, request.status());
+        auditLogService.record(actor, AuditLogService.PROVIDER_STATUS_CHANGED, "PROFIL_PRESTATAIRE", profile.id(), profile.fullName(),
+                "APPROVED".equals(request.status()) ? "Profil valide" : "Nouveau statut : " + request.status());
+        return profile;
     }
 
     @GetMapping("/bookings")
@@ -114,7 +151,10 @@ public class AdminController {
             @PathVariable UUID id,
             @Valid @RequestBody StatusUpdateRequest request
     ) {
-        currentUserService.requireAdmin(httpRequest);
-        return adminService.updateBookingStatus(id, request.status());
+        AuthenticatedUser actor = currentUserService.requireAdmin(httpRequest);
+        BookingResponse booking = adminService.updateBookingStatus(id, request.status());
+        auditLogService.record(actor, AuditLogService.BOOKING_STATUS_CHANGED, "RESERVATION", booking.id(),
+                booking.employerName() + " / " + booking.providerName(), "Nouveau statut : " + AuditLogService.bookingStatusLabel(booking.status()));
+        return booking;
     }
 }

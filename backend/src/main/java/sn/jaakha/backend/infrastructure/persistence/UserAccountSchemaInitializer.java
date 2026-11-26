@@ -137,6 +137,23 @@ public class UserAccountSchemaInitializer {
             jdbcTemplate.execute("alter table contact_message add column if not exists company varchar(160)");
             jdbcTemplate.execute("alter table contact_message add column if not exists message varchar(2000) not null default ''");
             jdbcTemplate.execute("alter table contact_message add column if not exists created_at timestamp not null default current_timestamp");
+            // Historique des actions des utilisateurs (qui a fait quoi, sur quoi, quand).
+            jdbcTemplate.execute("""
+                    create table if not exists audit_log (
+                        id uuid primary key,
+                        actor_id uuid,
+                        actor_name varchar(160),
+                        actor_role varchar(40),
+                        action varchar(60) not null,
+                        target_type varchar(40),
+                        target_id varchar(80),
+                        target_label varchar(255),
+                        details varchar(1000),
+                        created_at timestamp not null
+                    )
+                    """);
+            jdbcTemplate.execute("create index if not exists idx_audit_log_created_at on audit_log (created_at)");
+            jdbcTemplate.execute("create index if not exists idx_audit_log_actor on audit_log (actor_id)");
             ensureAdminAccount(jdbcTemplate, passwordEncoder, adminEmail, adminPhone, adminPassword);
         };
     }

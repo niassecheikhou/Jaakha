@@ -41,6 +41,7 @@ class SuperAdminFlowTest {
         jdbcTemplate.update("delete from account_profile where owner_key in (select cast(id as varchar) from app_user where email like 'flow-%@jaankha.test')");
         jdbcTemplate.update("delete from session_token where user_id in (select id from app_user where email like 'flow-%@jaankha.test')");
         jdbcTemplate.update("delete from password_reset_token where user_id in (select id from app_user where email like 'flow-%@jaankha.test')");
+        jdbcTemplate.update("delete from audit_log where actor_id in (select id from app_user where email like 'flow-%@jaankha.test')");
         jdbcTemplate.update("delete from app_user where email like 'flow-%@jaankha.test'");
     }
 
@@ -104,6 +105,27 @@ class SuperAdminFlowTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody("Admin Pirate", "flow-other@jaankha.test", "+221770000013", "ADMIN")))
                 .andExpect(status().isForbidden());
+
+        // L'historique est reserve au super administrateur.
+        mockMvc.perform(get("/api/admin/audit-logs").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/admin/audit-logs").header("Authorization", "Bearer " + superToken)
+                        .param("actorId", adminId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].action").value(org.hamcrest.Matchers.hasItems("CONNEXION", "PROFIL_MIS_A_JOUR", "COMPTE_CREE")))
+                .andExpect(jsonPath("$[?(@.action == 'COMPTE_CREE')].targetLabel").value(org.hamcrest.Matchers.contains("Employeur Flow")))
+                .andExpect(jsonPath("$[*].actorName").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("Admin Secondaire"))));
+        mockMvc.perform(get("/api/admin/audit-logs").header("Authorization", "Bearer " + superToken)
+                        .param("action", "COMPTE_VALIDE").param("actorRole", "SUPER_ADMIN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.targetId == '" + adminId + "')].actorName").value(org.hamcrest.Matchers.contains("Super Admin Flow")));
+        mockMvc.perform(get("/api/admin/audit-logs").header("Authorization", "Bearer " + superToken)
+                        .param("from", "2999-01-01T00:00:00Z"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+        mockMvc.perform(get("/api/admin/audit-logs").header("Authorization", "Bearer " + superToken)
+                        .param("action", "INCONNUE"))
+                .andExpect(status().isBadRequest());
 
         // Il ne voit pas les comptes d'administration et ne peut pas les modifier.
         mockMvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + adminToken))

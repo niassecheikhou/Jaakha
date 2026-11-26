@@ -11,6 +11,7 @@ import { isWithinPeriod, periodRange, type AnalysisPeriod } from '../../utils/an
 import { formatStatus } from '../../utils/format'
 import { AccountsTable, UserDetailPanel } from './AdminAccounts'
 import {
+  HistoryIcon,
   BagIcon,
   DashboardIcon,
   HourglassIcon,
@@ -23,6 +24,7 @@ import { AdminContactMessages } from './AdminContactMessages'
 import { AdminProfilePanel } from './AdminProfilePanel'
 import { ProfileIcon } from '../employer/EmployerIcons'
 import { ProviderProfilesReview } from './AdminProviders'
+import { AdminAuditLog } from './AdminAuditLog'
 import { CreateUserForm } from './CreateUserForm'
 import { CsvUsersImport } from './CsvUsersImport'
 import { bookingReference } from './admin-booking-utils'
@@ -38,7 +40,8 @@ export function AdminDashboard() {
   const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod | null>(null)
   const [adminError, setAdminError] = useState({ message: '', fields: {} })
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: adminApi.users })
+  // Rafraichi automatiquement : un dossier complete par un compte apparait sans recharger la page.
+  const usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: adminApi.users, refetchInterval: 10_000 })
   const providersQuery = useQuery({ queryKey: ['admin', 'providers'], queryFn: () => adminApi.providers() })
   const bookingsQuery = useQuery({ queryKey: ['admin', 'bookings'], queryFn: () => adminApi.bookings() })
   const contactMessagesQuery = useQuery({ queryKey: ['admin', 'contact-messages'], queryFn: adminApi.contactMessages })
@@ -167,6 +170,9 @@ export function AdminDashboard() {
       icon: <BagIcon />,
       badge: pendingBookings.length.toLocaleString('fr-FR'),
     },
+    ...(isSuperAdmin
+      ? [{ id: 'history' as const, label: 'Historique des actions', icon: <HistoryIcon /> }]
+      : []),
     {
       id: 'contact',
       label: 'Messages contact',
@@ -261,6 +267,11 @@ export function AdminDashboard() {
         />
       )}
       {activeMenu === 'profile' && <AdminProfilePanel />}
+      {activeMenu === 'history' && isSuperAdmin && (
+        <div className="dashboard-grid">
+          <AdminAuditLog users={usersQuery.data ?? []} />
+        </div>
+      )}
       {activeMenu === 'contact' && (
         <div className="dashboard-grid">
           <AdminContactMessages

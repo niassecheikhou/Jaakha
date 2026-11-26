@@ -8,6 +8,8 @@ export type AuthContextValue = {
   login: (payload: LoginPayload) => Promise<void>
   register: (payload: RegisterPayload) => Promise<User>
   logout: () => void
+  // Remplace le compte connecte (ex. compte valide par le super administrateur).
+  refreshUser: (user: User) => void
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

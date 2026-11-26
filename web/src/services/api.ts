@@ -10,6 +10,8 @@ import type {
   AccountProfilePayload,
   AdminCreateUserPayload,
   ApiError,
+  AuditLog,
+  AuditLogFilters,
   AuthResponse,
   Booking,
   BookingPayload,
@@ -241,6 +243,11 @@ export const adminApi = {
     const { data } = await api.get<Booking[]>('/admin/bookings', {
       params: status ? { status } : undefined,
     })
+    return data
+  },
+  // Historique des actions (super administrateur), filtres optionnels.
+  async auditLogs(filters: AuditLogFilters) {
+    const { data } = await api.get<AuditLog[]>('/admin/audit-logs', { params: filters })
     return data
   },
   async contactMessages() {

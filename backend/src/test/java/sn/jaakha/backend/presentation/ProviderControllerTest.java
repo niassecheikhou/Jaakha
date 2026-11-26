@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockMultipartFile;
+import sn.jaakha.backend.application.AuditLogService;
 import sn.jaakha.backend.application.CurrentUserService;
 import sn.jaakha.backend.application.ProviderService;
 import sn.jaakha.backend.application.ReviewService;
@@ -31,6 +32,8 @@ class ProviderControllerTest {
     private StorageService storageService;
     @Mock
     private CurrentUserService currentUserService;
+    @Mock
+    private AuditLogService auditLogService;
 
     @InjectMocks
     private ProviderController providerController;

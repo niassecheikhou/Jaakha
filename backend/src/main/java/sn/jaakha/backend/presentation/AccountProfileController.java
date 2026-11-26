@@ -1,5 +1,6 @@
 package sn.jaakha.backend.presentation;
 
+import sn.jaakha.backend.application.AuditLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.EnumMap;
@@ -32,6 +33,7 @@ import sn.jaakha.backend.infrastructure.storage.StorageService;
 @RestController
 @RequestMapping("/api/account/me")
 public class AccountProfileController {
+    private final AuditLogService auditLogService;
     private final AccountProfileService accountProfileService;
     private final StorageService storageService;
     private final CurrentUserService currentUserService;
@@ -41,12 +43,14 @@ public class AccountProfileController {
             AccountProfileService accountProfileService,
             StorageService storageService,
             CurrentUserService currentUserService,
-            ProviderService providerService
+            ProviderService providerService,
+            AuditLogService auditLogService
     ) {
         this.accountProfileService = accountProfileService;
         this.storageService = storageService;
         this.currentUserService = currentUserService;
         this.providerService = providerService;
+        this.auditLogService = auditLogService;
     }
 
     @GetMapping
@@ -59,7 +63,10 @@ public class AccountProfileController {
             HttpServletRequest request,
             @Valid @RequestBody AccountProfileRequest payload
     ) {
-        return accountProfileService.saveMine(currentUserService.requireUser(request).id().toString(), payload);
+        AuthenticatedUser user = currentUserService.requireUser(request);
+        AccountProfileResponse profile = accountProfileService.saveMine(user.id().toString(), payload);
+        auditLogService.record(user, AuditLogService.PROFILE_UPDATED, "COMPTE", user.id(), user.fullName(), null);
+        return profile;
     }
 
     @PostMapping(value = "/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -75,6 +82,7 @@ public class AccountProfileController {
         );
         // Prestataire : la photo publique est mise a jour tout de suite, sans attendre l'enregistrement du dossier.
         providerService.syncAccountPhoto(user, profile.photoUrl());
+        auditLogService.record(user, AuditLogService.PROFILE_PHOTO_UPDATED, "COMPTE", user.id(), user.fullName(), null);
         return new PhotoUploadResponse(profile.photoUrl());
     }
 
@@ -104,6 +112,8 @@ public class AccountProfileController {
         Map<IdentityDocumentSide, String> storedFilenames = new EnumMap<>(IdentityDocumentSide.class);
         files.forEach((side, file) -> storedFilenames.put(side, storageService.storeIdentityPhoto(file)));
         AccountProfileResponse profile = accountProfileService.updateIdentityPhotos(user.id().toString(), storedFilenames);
+        auditLogService.record(user, AuditLogService.IDENTITY_UPLOADED, "COMPTE", user.id(), user.fullName(),
+                files.size() == 2 ? "Recto et verso" : (files.containsKey(IdentityDocumentSide.FRONT) ? "Recto" : "Verso"));
         return new IdentityPhotosResponse(profile.identityPhotoUrl(), profile.identityPhotoBackUrl());
     }
 
