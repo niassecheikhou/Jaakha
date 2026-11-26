@@ -8,6 +8,7 @@ import { api } from './costante'
 import type {
   AccountProfile,
   AccountProfilePayload,
+  AdminBookingPayload,
   AdminCreateUserPayload,
   ApiError,
   AuditLog,
@@ -248,6 +249,11 @@ export const adminApi = {
   // Historique des actions (super administrateur), filtres optionnels.
   async auditLogs(filters: AuditLogFilters) {
     const { data } = await api.get<AuditLog[]>('/admin/audit-logs', { params: filters })
+    return data
+  },
+  // Reservation creee par l'administrateur pour un employeur qu'il gere.
+  async createBooking(payload: AdminBookingPayload) {
+    const { data } = await api.post<Booking>('/admin/bookings', payload)
     return data
   },
   async contactMessages() {

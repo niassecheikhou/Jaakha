@@ -22,6 +22,7 @@ import sn.jaakha.backend.application.AdminService;
 import sn.jaakha.backend.application.CurrentUserService;
 import sn.jaakha.backend.application.dto.AccountArchiveRequest;
 import sn.jaakha.backend.application.dto.AccountStatusUpdateRequest;
+import sn.jaakha.backend.application.dto.AdminBookingCreateRequest;
 import sn.jaakha.backend.application.dto.AdminCreateUserRequest;
 import sn.jaakha.backend.application.dto.BookingResponse;
 import sn.jaakha.backend.application.dto.ProviderProfileResponse;
@@ -141,6 +142,19 @@ public class AdminController {
     @GetMapping("/bookings")
     public List<BookingResponse> bookings(HttpServletRequest request, @RequestParam(required = false) String status) {
         return adminService.bookings(currentUserService.requireAdmin(request), status);
+    }
+
+    @PostMapping("/bookings")
+    public BookingResponse createBooking(
+            HttpServletRequest httpRequest,
+            @Valid @RequestBody AdminBookingCreateRequest request
+    ) {
+        AuthenticatedUser actor = currentUserService.requireAdmin(httpRequest);
+        BookingResponse booking = adminService.createBooking(actor, request);
+        auditLogService.record(actor, AuditLogService.BOOKING_CREATED, "RESERVATION", booking.id(),
+                booking.employerName() + " / " + booking.providerName(),
+                "Pour le " + booking.serviceDate() + (request.validate() ? ", validee a la creation" : ""));
+        return booking;
     }
 
     @PatchMapping("/bookings/{id}/status")

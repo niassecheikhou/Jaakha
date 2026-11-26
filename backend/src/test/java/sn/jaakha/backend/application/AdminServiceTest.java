@@ -24,6 +24,7 @@ import sn.jaakha.backend.application.dto.AuthenticatedUser;
 import sn.jaakha.backend.application.dto.UserResponse;
 import sn.jaakha.backend.domain.repository.ProviderProfileRepository;
 import sn.jaakha.backend.infrastructure.persistence.BookingAdminRepository;
+import sn.jaakha.backend.infrastructure.persistence.BookingRepository;
 import sn.jaakha.backend.infrastructure.persistence.UserAccountRepository;
 import sn.jaakha.backend.presentation.ForbiddenException;
 
@@ -46,6 +47,8 @@ class AdminServiceTest {
     private NotificationService notificationService;
     @Mock
     private AuthService authService;
+    @Mock
+    private BookingRepository bookingRepository;
 
     @InjectMocks
     private AdminService adminService;

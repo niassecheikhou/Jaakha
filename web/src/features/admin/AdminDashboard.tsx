@@ -6,7 +6,8 @@ import { useToast } from '../../components/toast-context'
 import { WorkspaceShell, type WorkspaceNavItem } from '../../components/WorkspaceShell'
 import { useAuth } from '../../hooks/use-auth'
 import { adminApi, getApiError } from '../../services/api'
-import type { AdminCreateUserPayload, BookingStatus, ProviderStatus, User } from '../../types/api'
+import type { AdminBookingPayload,
+  AdminCreateUserPayload, BookingStatus, ProviderStatus, User } from '../../types/api'
 import { isWithinPeriod, periodRange, type AnalysisPeriod } from '../../utils/analysis-period'
 import { formatStatus } from '../../utils/format'
 import { AccountsTable, UserDetailPanel } from './AdminAccounts'
@@ -25,6 +26,7 @@ import { AdminProfilePanel } from './AdminProfilePanel'
 import { ProfileIcon } from '../employer/EmployerIcons'
 import { ProviderProfilesReview } from './AdminProviders'
 import { AdminAuditLog } from './AdminAuditLog'
+import { AdminBookingForm } from './AdminBookingForm'
 import { CreateUserForm } from './CreateUserForm'
 import { CsvUsersImport } from './CsvUsersImport'
 import { bookingReference } from './admin-booking-utils'
@@ -104,6 +106,13 @@ export function AdminDashboard() {
       const apiError = getApiError(caughtError)
       setAdminError(apiError)
       toast.error('Archivage du compte impossible', apiError.message)
+    },
+  })
+  const createBookingMutation = useMutation({
+    mutationFn: (payload: AdminBookingPayload) => adminApi.createBooking(payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] })
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },
   })
   const bookingStatusMutation = useMutation({
@@ -268,11 +277,18 @@ export function AdminDashboard() {
         </div>
       )}
       {activeMenu === 'bookings' && (
-        <BookingsManagement
-          bookings={bookings}
-          loading={bookingStatusMutation.isPending}
-          onStatusChange={(booking, status) => bookingStatusMutation.mutate({ id: booking.id, bookingReference: bookingReference(booking.id), status })}
-        />
+        <>
+          <AdminBookingForm
+            employers={usersQuery.data ?? []}
+            loading={createBookingMutation.isPending}
+            onCreate={(payload) => createBookingMutation.mutateAsync(payload)}
+          />
+          <BookingsManagement
+            bookings={bookings}
+            loading={bookingStatusMutation.isPending}
+            onStatusChange={(booking, status) => bookingStatusMutation.mutate({ id: booking.id, bookingReference: bookingReference(booking.id), status })}
+          />
+        </>
       )}
       {activeMenu === 'profile' && <AdminProfilePanel />}
       {activeMenu === 'history' && isSuperAdmin && (

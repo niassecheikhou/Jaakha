@@ -1499,6 +1499,28 @@ textarea:focus {
   grid-column: 1 / -1;
 }
 
+.admin-create-form .span-2 {
+  grid-column: span 2;
+}
+
+.checkbox-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 700;
+}
+
+.checkbox-row input {
+  width: auto;
+  min-height: 0;
+}
+
+@media (max-width: 860px) {
+  .admin-create-form .span-2 {
+    grid-column: 1 / -1;
+  }
+}
+
 .admin-import-panel {
   display: grid;
   gap: 14px;

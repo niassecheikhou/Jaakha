@@ -10,6 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sn.jaakha.backend.application.dto.AdminBookingCreateRequest;
 import sn.jaakha.backend.application.dto.AdminCreateUserRequest;
 import sn.jaakha.backend.application.dto.AuthenticatedUser;
 import sn.jaakha.backend.application.dto.BookingResponse;
@@ -19,6 +20,7 @@ import sn.jaakha.backend.domain.enums.ProviderStatus;
 import sn.jaakha.backend.domain.model.ProviderProfile;
 import sn.jaakha.backend.domain.repository.ProviderProfileRepository;
 import sn.jaakha.backend.infrastructure.persistence.BookingAdminRepository;
+import sn.jaakha.backend.infrastructure.persistence.BookingRepository;
 import sn.jaakha.backend.infrastructure.persistence.UserAccountRepository;
 import sn.jaakha.backend.presentation.ConflictException;
 import sn.jaakha.backend.presentation.ForbiddenException;
@@ -32,6 +34,7 @@ public class AdminService {
     private final MailService mailService;
     private final NotificationService notificationService;
     private final AuthService authService;
+    private final BookingRepository bookingRepository;
 
     public AdminService(
             BookingAdminRepository bookingAdminRepository,
@@ -40,7 +43,8 @@ public class AdminService {
             UserAccountRepository userAccountRepository,
             MailService mailService,
             NotificationService notificationService,
-            AuthService authService
+            AuthService authService,
+            BookingRepository bookingRepository
     ) {
         this.bookingAdminRepository = bookingAdminRepository;
         this.passwordEncoder = passwordEncoder;
@@ -49,6 +53,7 @@ public class AdminService {
         this.mailService = mailService;
         this.notificationService = notificationService;
         this.authService = authService;
+        this.bookingRepository = bookingRepository;
     }
 
     /**
@@ -177,6 +182,47 @@ public class AdminService {
      * - un compte EMPLOYEUR ou PRESTATAIRE est gere par l'administrateur qui l'a cree
      *   (et par le super administrateur, qui gere tous les comptes).
      */
+    /**
+     * Reservation creee par un administrateur pour le compte d'un employeur qu'il gere (le super
+     * administrateur : n'importe quel employeur). Le prestataire doit etre valide et visible, comme
+     * pour une reservation faite par l'employeur. Avec validate, elle est acceptee aussitot.
+     */
+    @Transactional
+    public BookingResponse createBooking(AuthenticatedUser actor, AdminBookingCreateRequest request) {
+        UserResponse employer = userAccountRepository.findById(request.employerId())
+                .orElseThrow(() -> new IllegalArgumentException("L'employeur est introuvable."));
+        if (!Roles.EMPLOYEUR.equals(employer.role())) {
+            throw new IllegalArgumentException("Une reservation se fait pour le compte d'un employeur.");
+        }
+        assertManagesUser(actor, employer.id());
+        if (!employer.active() || employer.archived()) {
+            throw new IllegalArgumentException("Le compte de cet employeur doit etre valide avant de reserver pour lui.");
+        }
+        ProviderProfile provider = providerProfileRepository.findById(request.providerId())
+                .filter(profile -> profile.getStatus() == ProviderStatus.APPROVED)
+                .filter(profile -> userAccountRepository.visibleProviderUserIds().contains(profile.getUserId()))
+                .orElseThrow(() -> new IllegalArgumentException("Ce prestataire n'est pas disponible pour une reservation."));
+
+        BookingResponse booking = bookingRepository.create(
+                employer.id(),
+                provider.getId(),
+                request.serviceDate(),
+                request.startTime(),
+                request.durationHours(),
+                request.address().trim(),
+                request.instructions() == null || request.instructions().isBlank() ? null : request.instructions().trim()
+        );
+        if (!request.validate()) {
+            notificationService.notifyAdminsAboutBooking(booking);
+            notificationService.notifyProviderAboutBookingRequested(booking);
+            return booking;
+        }
+        BookingStatusPolicy.assertTransition(Roles.ADMIN, booking.status(), "ACCEPTED");
+        BookingResponse accepted = bookingAdminRepository.updateStatus(booking.id(), booking.status(), "ACCEPTED");
+        notificationService.notifyParticipantsAboutBookingStatus(accepted);
+        return accepted;
+    }
+
     private UserResponse findEditableUser(AuthenticatedUser actor, UUID id) {
         UserResponse user = userAccountRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Le compte utilisateur est introuvable."));
