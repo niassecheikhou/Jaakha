@@ -10,6 +10,10 @@ export function isProfileComplete(user: User) {
       && user.zone,
   )
 
+  if (user.role === 'ADMIN') {
+    // Dossier administrateur : piece d'identite recto/verso, adresse et localisation.
+    return Boolean(user.fullName && user.phone && user.identityPhotoUrl && user.identityPhotoBackUrl && user.address && user.zone)
+  }
   if (user.role === 'EMPLOYEUR') {
     return hasCommonProfile
   }

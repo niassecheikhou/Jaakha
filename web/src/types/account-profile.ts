@@ -12,4 +12,6 @@ export type AccountProfile = {
   skills: string[]
   guardianFullName: string | null
   guardianPhone: string | null
+  // Adresse precise (exigee pour le dossier d'un administrateur).
+  address: string | null
 }

@@ -6,4 +6,6 @@ export type AccountProfilePayload = {
   skills: string[]
   guardianFullName: string
   guardianPhone: string
+  // Optionnelle : absente, l'adresse deja enregistree est conservee.
+  address?: string
 }

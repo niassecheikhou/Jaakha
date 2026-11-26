@@ -92,14 +92,14 @@ class AdminServiceTest {
     }
 
     @Test
-    void superAdminCreatesAnActiveAdminAccountLinkedToHim() {
+    void superAdminCreatesAnAdminAccountPendingValidation() {
         when(passwordEncoder.encode(anyString())).thenReturn("hash");
         when(userAccountRepository.findById(any())).thenAnswer(invocation ->
                 Optional.of(account(invocation.getArgument(0), "ADMIN", null, null)));
 
         adminService.createUser(SUPER_ADMIN, createRequest("ADMIN"));
 
-        verify(userAccountRepository).create(any(), any(), any(), any(), eq("hash"), eq("ADMIN"), eq(true), eq(SUPER_ADMIN.id()));
+        verify(userAccountRepository).create(any(), any(), any(), any(), eq("hash"), eq("ADMIN"), eq(false), eq(SUPER_ADMIN.id()));
     }
 
     @Test
@@ -126,11 +126,10 @@ class AdminServiceTest {
     @Test
     void superAdminManagesTheAdminsHeCreated() {
         UUID id = UUID.randomUUID();
-        when(userAccountRepository.findById(id)).thenReturn(Optional.of(account(id, "ADMIN", null, null)));
+        when(userAccountRepository.findById(id)).thenReturn(Optional.of(adminWithDossier(id, "Rue 10, Medina")));
         when(userAccountRepository.findCreatedBy(id)).thenReturn(Optional.of(SUPER_ADMIN.id()));
 
         adminService.updateUserArchived(SUPER_ADMIN, id, true);
-        // Aucun dossier (photo, CNI...) n'est exige pour reactiver un administrateur.
         adminService.updateUserActive(SUPER_ADMIN, id, true);
 
         verify(userAccountRepository).updateArchived(id, true);
@@ -173,6 +172,41 @@ class AdminServiceTest {
         assertThat(adminService.users(SUPER_ADMIN)).hasSize(4);
     }
 
+    @Test
+    void adminWithoutAddressCannotBeValidated() {
+        UUID id = UUID.randomUUID();
+        when(userAccountRepository.findById(id)).thenReturn(Optional.of(adminWithDossier(id, null)));
+        when(userAccountRepository.findCreatedBy(id)).thenReturn(Optional.of(SUPER_ADMIN.id()));
+
+        assertThatThrownBy(() -> adminService.updateUserActive(SUPER_ADMIN, id, true))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("adresse")
+                .hasMessageNotContaining("photo du profil");
+        verify(userAccountRepository, never()).updateActive(any(), anyBoolean());
+    }
+
+    @Test
+    void adminWithoutIdentityDocumentCannotBeValidated() {
+        UUID id = UUID.randomUUID();
+        when(userAccountRepository.findById(id)).thenReturn(Optional.of(account(id, "ADMIN", null, null)));
+        when(userAccountRepository.findCreatedBy(id)).thenReturn(Optional.of(SUPER_ADMIN.id()));
+
+        assertThatThrownBy(() -> adminService.updateUserActive(SUPER_ADMIN, id, true))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("recto de la piece d'identite")
+                .hasMessageContaining("verso de la piece d'identite")
+                .hasMessageContaining("localisation");
+    }
+
+    private UserResponse adminWithDossier(UUID id, String address) {
+        return new UserResponse(
+                id, "Admin Secondaire", "admin2@jaankha.test", "+221771234567", "ADMIN",
+                false, false, false,
+                null, "/front", "/back",
+                null, "Dakar", null, 0, List.of(), null, null, "2026-11-01T10:00:00Z", address
+        );
+    }
+
     private AdminCreateUserRequest createRequest(String role) {
         return new AdminCreateUserRequest("Nouveau Compte", "nouveau@jaankha.test", "+221771234567", "Secret1!", role);
     }
@@ -182,7 +216,7 @@ class AdminServiceTest {
                 id, "Compte " + role, "compte@jaankha.test", "+221771234567", role,
                 false, false, false,
                 null, identityFront, identityBack,
-                null, null, null, 0, List.of(), null, null, "2026-11-01T10:00:00Z"
+                null, null, null, 0, List.of(), null, null, "2026-11-01T10:00:00Z", null
         );
     }
 
@@ -191,7 +225,7 @@ class AdminServiceTest {
                 id, "Moussa Fall", "moussa@jaankha.test", "+221771234567", "EMPLOYEUR",
                 false, false, false,
                 "http://localhost/uploads/profiles/photo.jpg", identityFront, identityBack,
-                null, "Dakar", null, 0, List.of(), null, null, "2026-11-01T10:00:00Z"
+                null, "Dakar", null, 0, List.of(), null, null, "2026-11-01T10:00:00Z", null
         );
     }
 }

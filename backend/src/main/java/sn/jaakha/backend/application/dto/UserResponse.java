@@ -24,6 +24,8 @@ public record UserResponse(
         String guardianFullName,
         String guardianPhone,
         // Date d'inscription (ISO-8601), utilisee pour filtrer les indicateurs du dashboard par periode.
-        String createdAt
+        String createdAt,
+        // Adresse precise du compte (renseignee notamment par les administrateurs).
+        String address
 ) {
 }

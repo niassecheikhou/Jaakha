@@ -3,7 +3,6 @@ import { ActionsMenu, type ActionsMenuItem } from '../../components/ActionsMenu'
 import { ProtectedImage } from '../../components/ProtectedImage'
 import type { User } from '../../types/api'
 import { formatPrice } from '../../utils/format'
-import { isAdministrationRole } from '../../utils/roles'
 import { ArchiveIcon, CheckIcon, EyeIcon, RestoreIcon, XIcon } from './AdminIcons'
 import { displayRole, initials, isProfileComplete } from './admin-utils'
 
@@ -31,8 +30,9 @@ export function UserDetailPanel({
   onClose: () => void
 }) {
   const isProvider = user.role === 'PRESTATAIRE'
-  // Un compte d'administration n'a ni piece d'identite ni dossier a faire valider.
-  const isAdministration = isAdministrationRole(user.role)
+  // Le super administrateur n'a pas de dossier ; un administrateur en a un (CNI, adresse, localisation).
+  const isAdministration = user.role === 'SUPER_ADMIN'
+  const isAdmin = user.role === 'ADMIN'
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -87,7 +87,8 @@ export function UserDetailPanel({
         <dl className="user-detail-grid">
           <div><dt>Nom complet</dt><dd>{user.fullName || 'Non renseigne'}</dd></div>
           <div><dt>Telephone</dt><dd>{user.phone || 'Non renseigne'}</dd></div>
-          <div><dt>Zone</dt><dd>{user.zone || 'Non renseignee'}</dd></div>
+          <div><dt>{isAdmin ? 'Localisation' : 'Zone'}</dt><dd>{user.zone || 'Non renseignee'}</dd></div>
+          {isAdmin && <div className="span-2"><dt>Adresse</dt><dd>{user.address || 'Non renseignee'}</dd></div>}
           {isProvider && (
             <>
               <div><dt>Tarif mensuel</dt><dd>{user.monthlyRate ? `${formatPrice(user.monthlyRate)}/mois` : 'Non renseigne'}</dd></div>

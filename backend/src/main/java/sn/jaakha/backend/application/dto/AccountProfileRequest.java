@@ -3,6 +3,7 @@ package sn.jaakha.backend.application.dto;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -25,6 +26,9 @@ public record AccountProfileRequest(
         @Pattern(
                 regexp = "^$|^\\+221(70|71|76|77|78)[0-9]{7}$",
                 message = "Le telephone du tuteur doit etre senegalais: +221 suivi de 70, 71, 76, 77 ou 78 puis 7 chiffres."
-        ) String guardianPhone
+        ) String guardianPhone,
+
+        // Optionnelle : absente (null), l'adresse deja enregistree est conservee.
+        @Size(max = 255, message = "L'adresse ne doit pas depasser 255 caracteres.") String address
 ) {
 }

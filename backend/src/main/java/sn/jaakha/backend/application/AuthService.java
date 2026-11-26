@@ -248,7 +248,8 @@ public class AuthService {
                 List.of(),
                 null,
                 null,
-                createdAt(resultSet)
+                createdAt(resultSet),
+                null
         );
     }
 

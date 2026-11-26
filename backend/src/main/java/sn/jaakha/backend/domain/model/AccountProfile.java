@@ -41,6 +41,10 @@ public class AccountProfile {
     @Column(length = 160)
     private String zone;
 
+    // Adresse precise (exigee pour valider un compte administrateur).
+    @Column(length = 255)
+    private String address;
+
     @Column(precision = 10, scale = 2)
     private BigDecimal monthlyRate;
 
@@ -129,6 +133,14 @@ public class AccountProfile {
 
     public void setBio(String bio) {
         this.bio = bio;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 
     public String getZone() {

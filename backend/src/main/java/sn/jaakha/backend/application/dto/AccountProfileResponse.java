@@ -18,7 +18,8 @@ public record AccountProfileResponse(
         int experienceYears,
         List<String> skills,
         String guardianFullName,
-        String guardianPhone
+        String guardianPhone,
+        String address
 ) {
     public static final String OWNER_IDENTITY_PHOTO_URL = "/api/account/me/identity-photo";
     public static final String OWNER_IDENTITY_PHOTO_BACK_URL = "/api/account/me/identity-photo/back";
@@ -36,7 +37,8 @@ public record AccountProfileResponse(
                 profile.getExperienceYears(),
                 splitSkills(profile.getSkills()),
                 profile.getGuardianFullName(),
-                profile.getGuardianPhone()
+                profile.getGuardianPhone(),
+                profile.getAddress()
         );
     }
 

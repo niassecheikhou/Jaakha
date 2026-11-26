@@ -3,6 +3,7 @@ package sn.jaakha.backend.presentation;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -37,13 +38,14 @@ class SuperAdminFlowTest {
 
     @AfterEach
     void cleanUp() {
+        jdbcTemplate.update("delete from account_profile where owner_key in (select cast(id as varchar) from app_user where email like 'flow-%@jaankha.test')");
         jdbcTemplate.update("delete from session_token where user_id in (select id from app_user where email like 'flow-%@jaankha.test')");
         jdbcTemplate.update("delete from password_reset_token where user_id in (select id from app_user where email like 'flow-%@jaankha.test')");
         jdbcTemplate.update("delete from app_user where email like 'flow-%@jaankha.test'");
     }
 
     @Test
-    void superAdminCreatesAdminWhoManagesOnlyEmployersAndProviders() throws Exception {
+    void superAdminValidatesAdminDossierThenAdminManagesOnlyEmployersAndProviders() throws Exception {
         jdbcTemplate.update("""
                         insert into app_user (id, full_name, email, phone, password_hash, role,
                                               email_verified, active, archived, created_at, updated_at)
@@ -62,10 +64,35 @@ class SuperAdminFlowTest {
                         .content(createBody("Admin Secondaire", "flow-admin@jaankha.test", "+221770000011", "ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("ADMIN"))
-                .andExpect(jsonPath("$.active").value(true))
+                .andExpect(jsonPath("$.active").value(false))
                 .andReturn().getResponse().getContentAsString();
         String adminId = JsonPath.read(adminJson, "$.id");
         String adminToken = login("flow-admin@jaankha.test");
+
+        // Compte en attente : pas encore d'acces a l'administration, mais il complete son dossier.
+        mockMvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/account/me").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"zone\":\"Dakar Plateau\",\"address\":\"Rue 10, Medina\",\"experienceYears\":0}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.address").value("Rue 10, Medina"));
+
+        // Sans piece d'identite, le super administrateur ne peut pas valider le compte.
+        mockMvc.perform(patch("/api/admin/users/" + adminId + "/active").header("Authorization", "Bearer " + superToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"active\":true}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("recto de la piece d'identite")));
+
+        // Pieces deposees (simulees en base : l'upload d'images est couvert par ses propres tests).
+        jdbcTemplate.update(
+                "update account_profile set identity_photo_url = 'recto.jpg', identity_photo_back_url = 'verso.jpg' where owner_key = ?",
+                adminId);
+        mockMvc.perform(patch("/api/admin/users/" + adminId + "/active").header("Authorization", "Bearer " + superToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"active\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(true))
+                .andExpect(jsonPath("$.address").value("Rue 10, Medina"));
 
         // L'administrateur cree un employeur, mais pas un autre administrateur.
         mockMvc.perform(post("/api/admin/users").header("Authorization", "Bearer " + adminToken)

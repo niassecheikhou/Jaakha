@@ -82,8 +82,8 @@ public class AdminService {
                     request.phone().trim(),
                     passwordEncoder.encode(request.password()),
                     role,
-                    // Un administrateur n'a pas de dossier a faire valider : il est actif des sa creation.
-                    adminAccount,
+                    // Tout nouveau compte (administrateur compris) attend la validation de son dossier.
+                    false,
                     actor.id()
             );
         } catch (DataIntegrityViolationException exception) {
@@ -123,7 +123,7 @@ public class AdminService {
         if (user.archived()) {
             throw new IllegalArgumentException("Ce compte est archive. Restaure-le avant de modifier sa validation.");
         }
-        if (active && !Roles.isAdministration(user.role())) {
+        if (active) {
             assertProfileReadyForValidation(user);
         }
 
@@ -187,10 +187,18 @@ public class AdminService {
         List<String> missingFields = new ArrayList<>();
         addMissing(missingFields, user.fullName(), "nom complet");
         addMissing(missingFields, user.phone(), "telephone");
-        addMissing(missingFields, user.photoUrl(), "photo du profil");
-        addMissing(missingFields, user.identityPhotoUrl(), "recto de la piece d'identite");
-        addMissing(missingFields, user.identityPhotoBackUrl(), "verso de la piece d'identite");
-        addMissing(missingFields, user.zone(), "zone");
+        if (Roles.ADMIN.equals(user.role())) {
+            // Dossier administrateur : piece d'identite recto/verso, adresse et localisation.
+            addMissing(missingFields, user.identityPhotoUrl(), "recto de la piece d'identite");
+            addMissing(missingFields, user.identityPhotoBackUrl(), "verso de la piece d'identite");
+            addMissing(missingFields, user.address(), "adresse");
+            addMissing(missingFields, user.zone(), "localisation (zone)");
+        } else {
+            addMissing(missingFields, user.photoUrl(), "photo du profil");
+            addMissing(missingFields, user.identityPhotoUrl(), "recto de la piece d'identite");
+            addMissing(missingFields, user.identityPhotoBackUrl(), "verso de la piece d'identite");
+            addMissing(missingFields, user.zone(), "zone");
+        }
 
         if ("PRESTATAIRE".equals(user.role())) {
             addMissing(missingFields, user.bio(), "bio");

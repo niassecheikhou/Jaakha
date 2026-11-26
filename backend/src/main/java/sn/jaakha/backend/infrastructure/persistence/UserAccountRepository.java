@@ -26,7 +26,7 @@ public class UserAccountRepository {
                         select u.id, u.full_name, u.email, u.phone, u.role, u.email_verified,
                                u.active, u.archived, u.created_at, p.photo_url, p.identity_photo_url, p.identity_photo_back_url,
                                p.bio, p.zone, p.monthly_rate, p.experience_years,
-                               p.skills, p.guardian_full_name, p.guardian_phone
+                               p.skills, p.guardian_full_name, p.guardian_phone, p.address
                         from app_user u
                         left join account_profile p on p.owner_key = cast(u.id as varchar)
                         order by u.created_at desc
@@ -40,7 +40,7 @@ public class UserAccountRepository {
                         select u.id, u.full_name, u.email, u.phone, u.role, u.email_verified,
                                u.active, u.archived, u.created_at, p.photo_url, p.identity_photo_url, p.identity_photo_back_url,
                                p.bio, p.zone, p.monthly_rate, p.experience_years,
-                               p.skills, p.guardian_full_name, p.guardian_phone
+                               p.skills, p.guardian_full_name, p.guardian_phone, p.address
                         from app_user u
                         left join account_profile p on p.owner_key = cast(u.id as varchar)
                         where u.id = ?
@@ -149,7 +149,8 @@ public class UserAccountRepository {
                 splitSkills(resultSet.getString("skills")),
                 resultSet.getString("guardian_full_name"),
                 resultSet.getString("guardian_phone"),
-                createdAt(resultSet)
+                createdAt(resultSet),
+                resultSet.getString("address")
         );
     }
 
